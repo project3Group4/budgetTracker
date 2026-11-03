@@ -7,7 +7,7 @@
 > After the presentation, change it only through pull requests, so the history shows what changed and why.
 > Your Final Submission is graded against this document.
 
-**Team:** `Group 4` · **Repo:** `https://github.com/project3Group4/budgetTracker` · **Last updated:** `10/31/2026`
+**Team:** `Group 4` · **Repo:** `https://github.com/project3Group4/budgetTracker` · **Last updated:** `11/2/2026`
 
 ---
 
@@ -44,8 +44,8 @@ check it.
 account baseline (sign in with GitHub and Google, update profile, delete account) **plus** the
 stories specific to your product.
 
-- **MVP stories:** `PRD-1, PRD-2,PRD-3, ... <FILL IN LATER>` (listed in section 5)
-- **Vertical slice:** `Addind an expense with an amount and category, save it to the database, and be displayed on home screen. This feature will be tested end-to-end usign Playwright.`
+- **MVP stories:** `PRD-1, PRD-2, PRD-3, PRD-11, PRD-14, PRD-16`
+- **Vertical slice:** `Adding an expense with an amount and category, save it to the database, and be displayed on home screen. This feature will be tested end-to-end usign Playwright.`
 - **Not building (this term):** `We will not be adding investment tips or passive financial growth`
 
 ## 5. User stories and acceptance criteria
@@ -69,12 +69,12 @@ test.
 | PRD-12 | As a `user`, I want to `see how much money I have remaining have expenses and savings` so that `I know how much money I have available to spend`      | **Given** `the user is signed in and has entered their pacheck`, **when** `they navigate to their home screen`, **then** `their remaining balance will be displayed after subtracting their expenses from their paycheck` |
 | PRD-13 | As a `user`, I want to `be notified when I enter an invalid expense amount` so that ` so I can correct mistakes and keep the budget accurate`         | **Given** `the user is signed in and adding/updating an expense`, **when** `they enter a negative number or leave it empty`, **then** `an error message will be displayed and the update will not be saved`               |
 | PRD-14 | As a `user`, I want to `update my profile information` so that `I can keep my account information accurate`                                           | **Given** `the user is signed in and on their profile page`, **when** `they update thier display name and save the changes`, **then** `their updated name will be saved and displayed on their profile`                   |
-| PRD-15 | As a `user`, I want to `` so that ``                                                                                                                  | **Given** ``, **when** ``, **then** ``                                                                                                                                |
-| PRD-16 | As a `user`, I want to `` so that ``                                                                                                                  | **Given** ``, **when** ``, **then** ``                                                                                                                                |
-| PRD-17 | As a `user`, I want to `` so that ``                                                                                                                  | **Given** ``, **when** ``, **then** ``                                                                                                                                |
-| PRD-18 | As a `user`, I want to `` so that ``                                                                                                                  | **Given** ``, **when** ``, **then** ``                                                                                                                                |
-| PRD-19 | As a `user`, I want to `` so that ``                                                                                                                  | **Given** ``, **when** ``, **then** ``                                                                                                                                |
-| PRD-20 | As a `user`, I want to `` so that ``                                                                                                                  | **Given** ``, **when** ``, **then** ``                                                                                                                                |
+| PRD-15 | As a `user`, I want to `choose an expense category from a predefined list` so that `my spending is organized consistently`                            | **Given** `I'm adding or updating an expense`, **when** `i open the category selector`, **then** `I can choose a category provided by the app`                                                                                                                                |
+| PRD-16 | As a `user`, I want to `see my largest spending category in my current paycheck budget` so that `I know which category accounts for the most spending`| **Given** `my current paycheck budget has expenses`, **when** `I view my spending summary`, **then** `the category with the highest total is identified`                                                                                                                                |
+| PRD-17 | As a `user`, I want to `start a new budget when I enter a new paycheck` so that `I can track my spending for that paycheck`                           | **Given** `I have a current paycheck budget`, **when** `I enter a new paycheck`, **then** `a new paycheck budget is created for it and new expenses can be added to it`                                                                                                                                |
+| PRD-18 | As a `user`, I want to `login to an existing account` so that `I can access previous expense/budget information`                                      | **Given** `the user has an account and expenses associated to their budget`, **when** `the user logs back in`, **then** `they should see the expenses they had before logging out`                                                                                                                                |
+| PRD-19 | As a `user`, I want to `be able to delete my account and use that same email again` so that `I can add new information to the new account`            | **Given** `the user had deleted their account previously`, **when** `the user makes a new account with that same email/github`, **then** `the user is prompted to put new information into the new account`                                                                                                                                |
+| PRD-20 | As a `admin`, I want to `I want to make new spending categories` so that `user's have more options to categorize spendings`                           | **Given** `the user logged in is an admin`, **when** `the admin creates a new expense category`, **then** `all the other users now see the new expense category`                                                                                                                                |
 
 ---
 
@@ -83,3 +83,4 @@ test.
 | Date       | PR   | What changed and why |
 |------------|------|---|
 | `10/31/26` | `#1` | Initial version |
+|`11/2/2026`|`#8`|added more prds|
