@@ -1,0 +1,14 @@
+### macOS ###
+.DS_Store
+
+### Android Studio/ IntelliJ ###
+.idea/
+*.iml
+
+### Gradle ###
+.gradle/
+**/build/
+
+### Environment Variables / Secrets ###
+.env
+.env.*
