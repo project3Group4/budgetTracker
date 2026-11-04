@@ -1,0 +1,843 @@
+# Starter OpenAPI contract for CST 438 Project 02.
+# Render it:   https://editor.swagger.io  (File > Import file, or paste)
+# Lint it:     npx @redocly/cli lint docs/openapi.yaml
+# Mock it:     npx @stoplight/prism-cli mock docs/openapi.yaml   -> http://127.0.0.1:4010
+openapi: 3.0.3
+
+
+info:
+  title: Budgeting API
+  version: 1.0.0
+  description: |
+    API for our budgeting application.
+    Every error uses RFC 9457 Problem Details (see components/schemas/Problem).
+  license:
+    name: MIT
+    url: https://opensource.org/licenses/MIT
+  contact:
+    name: Team 04
+    url: https://github.com/project3Group4/budgetTracker/tree/main
+
+
+servers:
+  - url: http://localhost:8080
+    description: Local (docker compose up)
+  - url: https://budget-api.example.com
+    description: Production (replace when set up)
+
+
+# Every endpoint requires a Bearer token unless it overrides this with `security: []`.
+security:
+  - bearerAuth: []
+
+
+tags:
+  - name: User
+    description: The signed-in user's own account
+  - name: Admin
+    description: Admin-only user management
+  - name: PaycheckBudget
+    description: The signed-in user's paycheck amount and savings percent
+  - name: Category
+    description: The application's spending categories
+
+
+paths:
+  /api/v1/user/me:
+    get:    
+      tags: [User]
+      operationId: getMe
+      summary: Get the signed-in user
+      description: >-
+        Returns the caller's account. On the first call with a new Google
+        account, the user row is created with role USER.
+      responses:
+        '200':
+          description: The signed-in user
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalError'
+    delete:
+      tags: [User]
+      operationId: deleteMyAccount
+      summary: Delete my own account and ALL my data
+      description: Any signed-in user. Deletes the user row and everything they own (expenses, paycheck, etc).
+      responses:
+        '500':
+          $ref: '#/components/responses/InternalError'
+        '204':
+          description: Deleted. The token is now useless.
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+    patch:
+      tags: [User]
+      operationId: updateDisplayName
+      summary: Updates my own display name
+      description: Any signed-in user. Allows the user to change their display name.
+      responses:
+        '500':
+          $ref: '#/components/responses/InternalError'
+        '200':
+          description: The updated user
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+
+  /api/v1/user:
+    get:
+      tags: [Admin]
+      operationId: listUsers
+      summary: List all users (admin only)
+      parameters:
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/Size'
+      responses:
+        '500':
+          $ref: '#/components/responses/InternalError'
+        '200':
+          description: One page of users
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserPage'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+
+  /api/v1/user/{userId}:
+    parameters:
+      - name: userId
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+          example: 7
+    get:
+      tags: [Admin]
+      operationId: getUser
+      summary: View one user (admin only)
+      responses:
+        '500':
+          $ref: '#/components/responses/InternalError'
+        '200':
+          description: The user
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    patch:
+      tags: [Admin]
+      operationId: updateUserRole
+      summary: Grant or revoke admin (admin only)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UserPatch'
+      responses:
+        '500':
+          $ref: '#/components/responses/InternalError'
+        '200':
+          description: The updated user
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    delete:
+      tags: [Admin]
+      operationId: deleteUser
+      summary: Delete a user and all their data (admin only)
+      description: Requires the ADMIN role. A USER token gets 403.
+      responses:
+        '500':
+          $ref: '#/components/responses/InternalError'
+        '204':
+          description: Deleted
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        
+  /api/v1/user/me/paycheck-budget:
+    get:
+      tags: [PaycheckBudget]
+      operationId: getPaycheckBudget
+      summary: Gives the current paycheck amount and savings amount
+      responses:
+        '200':
+          description: Paycheck amount and savings amount
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaycheckBudget'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalError'
+    post:
+      tags: [MealPlans]
+      operationId: createMealPlan
+      summary: Create a new weekly meal plan
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MealPlanCreate'
+      responses:
+        '201':
+          description: Meal plan created
+          headers:
+            Location:
+              description: URL of the new meal plan
+              schema:
+                type: string
+                example: /api/v1/meal-plans/67
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MealPlan'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /api/v1/meal-plans/{mealPlanId}:
+    parameters:
+      - $ref: '#/components/parameters/MealPlanId'
+    get:
+      tags: [MealPlans]
+      operationId: getMealPlan
+      summary: Get one meal plan and its entries
+      responses:
+        '200':
+          description: The requested meal plan
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MealPlan'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+    patch:
+      tags: [MealPlans]
+      operationId: updateMealPlan
+      summary: Change a meal plan
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MealPlanPatch'
+      responses:
+        '200':
+          description: The updated meal plan
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MealPlan'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+    delete:
+      tags: [MealPlans]
+      operationId: deleteMealPlan
+      summary: Delete a meal plan and its entries
+      responses:
+        '204':
+          description: Meal plan and its entries deleted
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /api/v1/meal-plans/{mealPlanId}/entries:
+    parameters:
+      - $ref: '#/components/parameters/MealPlanId'
+
+    get:
+      tags: [MealPlans]
+      operationId: listMealPlanEntries
+      summary: List the meals in a meal plan
+      responses:
+        '200':
+          description: The planned meals in the meal plan
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/MealPlanEntry'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+    post:
+      tags: [MealPlans]
+      operationId: addMealPlanEntry
+      summary: Add a recipe to a meal plan
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MealPlanEntryCreate'
+      responses:
+        '201':
+          description: Meal added to the meal plan
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MealPlanEntry'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+          
+  /api/v1/meal-plans/{mealPlanId}/entries/{entryId}:
+    parameters:
+      - $ref: '#/components/parameters/MealPlanId'
+      - $ref: '#/components/parameters/EntryId'
+
+    patch:
+      tags: [MealPlans]
+      operationId: updateMealPlanEntry
+      summary: Change a planned meal
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MealPlanEntryPatch'
+      responses:
+        '200':
+          description: The updated planned meal
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MealPlanEntry'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+    delete:
+      tags: [MealPlans]
+      operationId: deleteMealPlanEntry
+      summary: Remove a planned meal
+      responses:
+        '204':
+          description: Planned meal removed
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: JWT from the OAuth2 Authorization Code + PKCE flow (with Google, send the ID token; Google's access_token is opaque).
+
+
+  parameters:
+    RecipeId:
+      name: recipeId
+      in: path
+      required: true
+      schema:
+        type: integer
+        format: int64
+        example: 42
+        
+    MealPlanId:
+      name: mealPlanId
+      in: path
+      required: true
+      schema:
+        type: integer
+        format: int64
+        example: 67
+    
+    EntryId:
+      name: entryId
+      in: path
+      required: true
+      schema:
+        type: integer
+        format: int64
+        example: 54
+        
+    Page:
+      name: page
+      in: query
+      description: Zero-based page number
+      schema:
+        type: integer
+        minimum: 0
+        default: 0
+        
+    Size:
+      name: size
+      in: query
+      description: Items per page
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 100
+        default: 20
+
+
+  schemas:
+    MealPlan:
+      type: object
+      required: [id, weekStart, entries]
+      properties:
+        id:
+          type: integer
+          format: int64
+          readOnly: true
+          example: 67
+        weekStart:
+          type: string
+          format: date
+          example: "2026-10-05"
+        entries:
+          type: array
+          items:
+            $ref: '#/components/schemas/MealPlanEntry'
+    
+    MealPlanEntry:
+      type: object
+      required: [id, mealPlanId, recipeId, plannedDate, mealType]
+      properties:
+        id:
+          type: integer
+          format: int64
+          readOnly: true
+          example: 54
+        mealPlanId:
+          type: integer
+          format: int64
+          readOnly: true
+          example: 23
+        recipeId:
+          type: integer
+          format: int64
+          example: 22
+        plannedDate:
+          type: string
+          format: date
+          example: "2026-10-01"
+        mealType:
+          type: string
+          enum: [BREAKFAST, LUNCH, DINNER]
+          example: DINNER
+    
+    MealPlanCreate:
+      description: Body for POST. Creates a weekly meal plan that may start with no entries.
+      type: object
+      required: [weekStart]
+      properties:
+        weekStart:
+          type: string
+          format: date
+          example: "2026-10-05"
+
+    MealPlanPatch:
+      description: Body for PATCH. Send only the fields you want to change.
+      type: object
+      minProperties: 1
+      properties:
+        weekStart:
+          type: string
+          format: date 
+          example: "2020-12-04"
+
+    MealPlanEntryCreate:
+      description: Body for POST. Adds a recipe to a meal plan.
+      type: object
+      required: [recipeId, plannedDate, mealType]
+      properties:
+        recipeId:
+          type: integer
+          format: int64
+          example: 57
+        plannedDate:
+          type: string
+          format: date
+          description: Must be within the meal plan's week (weekStart through weekStart + 6 days), otherwise 400.
+          example: "2026-10-07"
+        mealType:
+          type: string
+          enum: [BREAKFAST, LUNCH, DINNER]
+          example: LUNCH
+
+    MealPlanEntryPatch:
+      description: Body for PATCH. Send only the fields you want to change.
+      type: object
+      minProperties: 1
+      properties:
+        recipeId:
+          type: integer
+          format: int64
+          example: 57
+        plannedDate:
+          type: string
+          format: date
+          description: Must be within the meal plan's week (weekStart through weekStart + 6 days), otherwise 400.
+          example: "2026-10-07"
+        mealType:
+          type: string
+          enum: [BREAKFAST, LUNCH, DINNER]
+          example: LUNCH
+          
+    MealPlanPage:
+      type: object
+      required: [content, page]
+      properties:
+        content:
+          type: array
+          items:
+            $ref: '#/components/schemas/MealPlan'
+        page:
+          $ref: '#/components/schemas/PageMeta'
+
+
+    Recipe:
+      type: object
+      required: [id, name, ingredients, measurements, instructions]
+      properties:
+        id:
+          type: integer
+          format: int64
+          readOnly: true
+          example: 42
+        name:
+          type: string
+          example: Brown Sugar Oatmeal
+        createdAt:
+          type: string
+          format: date-time
+          readOnly: true
+        ingredients:
+          type: array
+          items:
+            $ref: '#/components/schemas/Ingredient'
+        measurements:
+          type: string
+          nullable: true
+          example: ½ cup
+        instructions:
+          type: string
+          nullable: true
+          example: Instructions for a recipe
+
+
+    RecipeCreate:
+      description: Body for POST and PUT. PUT replaces every field.
+      type: object
+      required: [name, ingredientIds, measurements, instructions]
+      properties:
+        name:
+          type: string
+          minLength: 1
+          example: Brown Sugar Oatmeal
+        ingredientIds:
+          type: array
+          items:
+            type: integer
+            format: int64
+          example: [1, 2, 3]
+        measurements:
+          type: string
+          nullable: true
+          example: ½ cup
+        instructions:
+          type: string
+          nullable: true
+          example: Instructions for a recipe
+
+
+    IngredientCreate:
+      description: Body for POST and PUT. PUT replaces every field.
+      type: object
+      required: [ingredientName]
+      properties:
+        ingredientName:
+          type: string
+          nullable: true
+          example: Brown Sugar
+
+
+    RecipePatch:
+      description: Body for PATCH. Send only the fields you want to change.
+      type: object
+      minProperties: 1
+      properties:
+        name:
+          type: string
+          minLength: 1
+          example: Updated Recipe Name
+        ingredientIds:
+          type: array
+          items:
+            type: integer
+            format: int64
+          example: [1, 3]
+        measurements:
+          type: string
+          nullable: true
+          example: ½ cup
+        instructions:
+          type: string
+          nullable: true
+          example: Instructions for a recipe
+
+
+    Ingredient:
+      type: object
+      required: [id, ingredientName]
+      properties:
+        id:
+          type: integer
+          format: int64
+          readOnly: true
+          example: 67
+        ingredientName:
+          type: string
+          nullable: true
+          example: Apple Slices
+
+
+    PageMeta:
+      description: >-
+        Spring Data's PagedModel shape. Turn it on with
+        spring.data.web.pageable.serialization-mode=via_dto in application.properties.
+      type: object
+      required: [size, number, totalElements, totalPages]
+      properties:
+        size:
+          type: integer
+          example: 20
+        number:
+          type: integer
+          example: 0
+        totalElements:
+          type: integer
+          format: int64
+          example: 57
+        totalPages:
+          type: integer
+          example: 3
+
+
+    RecipePage:
+      type: object
+      required: [content, page]
+      properties:
+        content:
+          type: array
+          items:
+            $ref: '#/components/schemas/Recipe'
+        page:
+          $ref: '#/components/schemas/PageMeta'
+
+
+    IngredientsPage:
+      type: object
+      required: [content, page]
+      properties:
+        content:
+          type: array
+          items:
+            $ref: '#/components/schemas/Ingredient'
+        page:
+          $ref: '#/components/schemas/PageMeta'
+
+
+    User:
+      type: object
+      required: [id, email, displayName, role]
+      properties:
+        id:
+          type: integer
+          format: int64
+          example: 7
+        email:
+          type: string
+          format: email
+          example: sam@csumb.edu
+        displayName:
+          type: string
+          example: Sam Otter
+        role:
+          $ref: '#/components/schemas/Role'
+
+
+    Role:
+      type: string
+      enum: [USER, ADMIN]
+
+
+    UserPatch:
+      description: Body for PATCH /api/v1/users/{userId}. Today the only editable field is the role.
+      type: object
+      required: [role]
+      properties:
+        role:
+          $ref: '#/components/schemas/Role'
+
+
+    UserPage:
+      type: object
+      required: [content, page]
+      properties:
+        content:
+          type: array
+          items:
+            $ref: '#/components/schemas/User'
+        page:
+          $ref: '#/components/schemas/PageMeta'
+
+
+    Problem:
+      description: RFC 9457 Problem Details. The ONE error body every endpoint returns.
+      type: object
+      required: [title, status]
+      properties:
+        type:
+          type: string
+          default: about:blank
+        title:
+          type: string
+          example: Not Found
+        status:
+          type: integer
+          example: 404
+        detail:
+          type: string
+          example: Recipe 42 not found
+        instance:
+          type: string
+          example: /api/v1/recipes/42
+
+
+  responses:
+    BadRequest:
+      description: Validation failed or malformed JSON
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/Problem'
+          example:
+            title: Bad Request
+            status: 400
+            detail: One or more fields failed validation. Check the request against the contract.
+    Unauthorized:
+      description: Missing or invalid token
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/Problem'
+          example:
+            title: Unauthorized
+            status: 401
+    Forbidden:
+      description: Valid token, but not allowed (for example, not an admin)
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/Problem'
+          example:
+            title: Forbidden
+            status: 403
+    NotFound:
+      description: Doesn't exist, or belongs to someone else
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/Problem'
+          example:
+            title: Not Found
+            status: 404
+            detail: Recipe 42 not found
+    InternalError:
+      description: Unexpected server error. Your app still needs to show something useful.
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/Problem'
+          example:
+            title: Internal Server Error
+            status: 500
