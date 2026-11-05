@@ -14,7 +14,6 @@ erDiagram
         string email
         string display_name
         string role
-        datetime created_at
     }
 
     PAYCHECK {
@@ -22,6 +21,7 @@ erDiagram
         int user_id FK
         decimal paycheck_amount
         decimal savings_percentage
+        date paycheck_date
     }
 
     FINANCIALS {
