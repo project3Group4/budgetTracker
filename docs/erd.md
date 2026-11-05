@@ -14,13 +14,14 @@ erDiagram
         string email
         string display_name
         string role
+        datetime created_at
     }
 
     PAYCHECK {
         int paycheck_id PK
         int user_id FK
         decimal paycheck_amount
-        date paycheck_date
+        decimal savings_percentage
     }
 
     FINANCIALS {
