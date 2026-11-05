@@ -28,21 +28,22 @@ public class GitHubIdentityClient {
             MediaType.parseMediaType("application/vnd.github+json");
 
     // this client makes requests from the backend to github.
-    private final RestClient githubClient = RestClient.create();
+    private final RestClient githubClient;
 
     // these values come from application.properties and the environment.
     private final String clientId;
     private final String clientSecret;
 
-    /**
-     * gives this service the github app values without putting the secret in code.
-     */
+    // builds a github client for real requests in the app and fake replies in tests.
     public GitHubIdentityClient(
+            RestClient.Builder githubClientBuilder,
             @Value("${app.oauth.github.client-id}") String clientId,
             @Value("${app.oauth.github.client-secret}") String clientSecret) {
+        this.githubClient = githubClientBuilder.build();
         this.clientId = clientId;
         this.clientSecret = clientSecret;
     }
+
 
     /**
      * trades the temporary code for github account details.
