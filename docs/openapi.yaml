@@ -48,9 +48,7 @@ paths:
       tags: [User]
       operationId: getMe
       summary: Get the signed-in user
-      description: >-
-        Returns the caller's account. On the first call with a new Google
-        account, the user row is created with role USER.
+      description: Returns or creates paychecks belonging only to the authenticated user. The user ID is derived from the authentication token.
       responses:
         '200':
           description: The signed-in user
@@ -210,7 +208,7 @@ paths:
     get:
       tags: [User]
       operationId: getPaycheck
-      summary: Gives a list of the paycheck and savings amount for the logged in user
+      summary: Gives a list of the paycheck and savings amount for the logged in user. Returns 404 if the paycheck does not exist or belongs to another user.
       responses:
         '200':
           description: Paycheck amount and savings amount
@@ -229,7 +227,7 @@ paths:
     post:
       tags: [User]
       operationId: createPaycheck
-      summary: Creates a new paycheck for the signed-in user
+      summary: Creates a new paycheck for the signed-in user that belongs to the user
       requestBody:
         required: true
         content:
@@ -263,7 +261,7 @@ paths:
     get:
         tags: [User]
         operationId: getSpecificPaycheck
-        summary: Gets a specific paycheck from user
+        summary: Gets a specific paycheck from user. Returns 404 if the paycheck does not exist or belongs to another user.
         responses:
           '200':
             description: The paycheck
@@ -282,7 +280,7 @@ paths:
     patch:
         tags: [User]
         operationId: patchSpecificPaycheck
-        summary: Patches a specific paycheck from the user
+        summary: Patches a specific paycheck from the user that belongs to the user
         requestBody:
           required: true
           content:
@@ -307,7 +305,7 @@ paths:
     delete:
         tags: [User]
         operationId: deleteSpecificPaycheck
-        summary: Deletes a specific paycheck from the user
+        summary: Deletes a specific paycheck from the user that belongs to the user
         responses:
           '204':
             description: Deleted
@@ -457,7 +455,7 @@ paths:
     get:
       tags: [Financials]
       operationId: getMyFinancials
-      summary: Gets financials per category for the signed-in user
+      summary: Gets financials per paycheck for the signed-in user and that user only.
       responses:
         '200':
           description: The user's financials
@@ -476,7 +474,7 @@ paths:
     post:
       tags: [Financials]
       operationId: postMyFinancials
-      summary: Creates a new financial information for the signed-in user per category (impotent, will replace exisiting financial info)
+      summary: Creates a new financial information for the signed-in user per paycheck.
       requestBody:
         required: true
         content:
@@ -520,7 +518,7 @@ paths:
     get:
       tags: [Financials]
       operationId: getMyFinancialsWithId
-      summary: Gets financials per category per id for the signed-in user
+      summary: Gets financials per paycheck per id for the signed-in user
       responses:
         '200':
           description: The user's financials
@@ -537,7 +535,7 @@ paths:
     patch:
       tags: [Financials]
       operationId: updateMyFinancials
-      summary: Updates the set amount for financials in this category
+      summary: Updates the set amount for financials in this paycheck for this signed-in user
       requestBody:
         required: true
         content:
@@ -560,7 +558,7 @@ paths:
     delete:
       tags: [Financials]
       operationId: deleteMyFinancials
-      summary: Deletes the financial for this category
+      summary: Deletes the financial for this paycheck for this signed-in user
       responses:
         '204':
           description: Financial deleted
@@ -589,7 +587,7 @@ paths:
     get:
       tags: [Financials]
       operationId: getExpenses
-      summary: Gets all expenses for a financial allocation
+      summary: Gets all expenses for a finance decision for this signed-in user
       responses:
         '200':
           description: List of expenses
@@ -608,7 +606,7 @@ paths:
     post:
       tags: [Financials]
       operationId: createExpense
-      summary: Creates an expense for a financial allocation
+      summary: Creates an expense for a finance decision for this signed-in user
       requestBody:
         required: true
         content:
@@ -654,7 +652,7 @@ paths:
     get:
       tags: [Financials]
       operationId: getExpense
-      summary: Gets a specific expense
+      summary: Gets a specific expense for the signed-in user
       responses:
         '200':
           description: The expense
@@ -671,7 +669,7 @@ paths:
     patch:
       tags: [Financials]
       operationId: updateExpense
-      summary: Updates an expense
+      summary: Updates an expense for the signed-in user
       requestBody:
         required: true
         content:
@@ -696,7 +694,7 @@ paths:
     delete:
       tags: [Financials]
       operationId: deleteExpense
-      summary: Deletes an expense
+      summary: Deletes an expense for the signed-in user
       responses:
         '204':
           description: Expense deleted
@@ -753,10 +751,14 @@ components:
           type: number
           format: double
           example: 420.67
+          minimum: 0
+          multipleOf: 0.01
         savingsPercent:
           type: number
           format: double
           example: 20.5
+          minimum: 0
+          maximum: 100
         paycheckDate:
           type: string
           format: date
@@ -775,10 +777,14 @@ components:
           type: number
           format: double
           example: 420.67
+          minimum: 0
+          multipleOf: 0.01
         savingsPercent:
           type: number
           format: double
           example: 20.5
+          minimum: 0
+          maximum: 100
 
     Category:
       type: object
@@ -857,6 +863,8 @@ components:
           type: number
           format: double
           example: 75.50
+          minimum: 0
+          multipleOf: 0.01
 
 
     FinancialsCreate:
@@ -870,6 +878,8 @@ components:
           type: number
           format: double
           example: 75.50
+          minimum: 0
+          multipleOf: 0.01
 
 
     Expense:
@@ -886,6 +896,8 @@ components:
         amount:
           type: number
           format: double
+          minimum: 0
+          multipleOf: 0.01
         description:
           type: string
         expenseDate:
@@ -900,6 +912,8 @@ components:
         amount:
           type: number
           format: double
+          minimum: 0
+          multipleOf: 0.01
         description:
           type: string
         expenseDate:
