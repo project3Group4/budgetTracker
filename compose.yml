@@ -12,6 +12,24 @@ services:
       - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U budgetuser -d budgettracker" ]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  api:
+      build: ./api
+      container_name: budgettracker-api
+      ports:
+        - "8080:8080"
+      environment:
+        DB_URL: jdbc:postgresql://db:5432/budgettracker
+        DB_USER: budgetuser
+        DB_PASSWORD: ${POSTGRES_PASSWORD}
+      depends_on:
+        db:
+          condition: service_healthy
 
 volumes:
   postgres_data:
