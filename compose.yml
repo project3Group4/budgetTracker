@@ -1,0 +1,35 @@
+#defines containers Docker will run
+services:
+  #Name of our PostgreSQL service
+  db:
+    image: postgres:17
+    container_name: budgettracker-db
+    environment:
+      POSTGRES_DB: budgettracker
+      POSTGRES_USER: budgetuser
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U budgetuser -d budgettracker" ]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  api:
+      build: ./api
+      container_name: budgettracker-api
+      ports:
+        - "8080:8080"
+      environment:
+        DB_URL: jdbc:postgresql://db:5432/budgettracker
+        DB_USER: budgetuser
+        DB_PASSWORD: ${POSTGRES_PASSWORD}
+      depends_on:
+        db:
+          condition: service_healthy
+
+volumes:
+  postgres_data:
