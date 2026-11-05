@@ -41,9 +41,9 @@ dependencies {
 }
 
 tasks.named('test') {
-	useJUnitPlatform(
+	useJUnitPlatform{
 			excludeTags 'neon'
-	)
+	}
 }
 
 // also coming straight from project 2 because I thought this was cool
