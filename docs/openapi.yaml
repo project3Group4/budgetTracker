@@ -32,6 +32,8 @@ security:
 
 
 tags:
+  - name: Auth
+    description: Authentication based api routes
   - name: User
     description: The signed-in user's own account
   - name: Admin
@@ -43,12 +45,62 @@ tags:
 
 
 paths:
+  /auth/github:
+    post:
+      tags: [Auth]
+      operationId: authWithGitHub
+      summary: Authenticate using GitHub
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/GithubAuthRequest'
+      responses:
+        '200':
+          description: Successful authentication. Returns the application JWT as well as user information.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /auth/google:
+    post:
+      tags: [Auth]
+      operationId: authWithGoogle
+      summary: Authenticate with Google
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/GoogleAuthRequest'
+      responses:
+        '200':
+          description: Successful authentication. Returns the application JWT as well as user information.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+
+
   /api/v1/user/me:
     get:    
       tags: [User]
       operationId: getMe
       summary: Get the signed-in user
-      description: Returns or creates paychecks belonging only to the authenticated user. The user ID is derived from the authentication token.
+      description: Returns the authenticated user's account information. The user ID is derived from the authentication token.
       responses:
         '200':
           description: The signed-in user
@@ -207,7 +259,7 @@ paths:
   /api/v1/user/me/paychecks:
     get:
       tags: [User]
-      operationId: getPaycheck
+      operationId: getMyPaychecks
       summary: Gives a list of the paycheck and savings amount for the logged in user. Returns 404 if the paycheck does not exist or belongs to another user.
       responses:
         '200':
@@ -222,6 +274,8 @@ paths:
           $ref: '#/components/responses/BadRequest'
         '401':
           $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
         '500':
           $ref: '#/components/responses/InternalError'
     post:
@@ -474,7 +528,7 @@ paths:
     post:
       tags: [Financials]
       operationId: postMyFinancials
-      summary: Creates a new financial information for the signed-in user per paycheck.
+      summary: Creates a new financial information for the signed-in user per paycheck. Multiple can be made but there shouldn't be more than one per category.
       requestBody:
         required: true
         content:
@@ -489,7 +543,7 @@ paths:
               description: URL of the new finance info
               schema:
                 type: string
-                example: /api/v1/user/me/7/financials
+                example: /api/v1/user/me/paychecks/7/financials/15
           content:
             application/json:
               schema:
@@ -713,7 +767,7 @@ components:
       type: http
       scheme: bearer
       bearerFormat: JWT
-      description: JWT from the OAuth2 Authorization Code + PKCE flow (with Google, send the ID token; Google's access_token is opaque).
+      description: JWT issued by this application after successful authentication with Google or GitHub. Include this token in the Authorization header as a Bearer token.
 
 
   parameters:
@@ -738,6 +792,40 @@ components:
 
 
   schemas:
+    GithubAuthRequest:
+      type: object
+      required: [code, codeVerifier, redirectUri]
+      properties:
+        code:
+          type: string
+          description: Authorization code returned by GitHub.
+        codeVerifier:
+          type: string
+          description: PKCE code verifier used during the authorization flow.
+        redirectUri:
+          type: string
+          format: uri
+          description: Redirect URI used when requesting the authorization code.
+
+    GoogleAuthRequest:
+      type: object
+      required: [idToken]
+      properties:
+        idToken:
+          type: string
+          description: Google ID token obtained during Google sign-in.
+
+    AuthResponse:
+      type: object
+      required: [token, user]
+      properties:
+        token:
+          type: string
+          description: JWT issued by this application. Used to authenticate future API requests.
+          example: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9
+        user:
+          $ref: '#/components/schemas/User'
+
     Paycheck:
       type: object
       required: [id, paycheckAmount, savingsPercent]
@@ -766,7 +854,7 @@ components:
     
     UpdatePaycheck:
       type: object
-      description: Body for PATCH /api/v1/user/me/paycheck-budget. The paycheck amount and savings percentage can both be updated.
+      description: Body for PATCH /api/v1/user/me/paychecks/{paycheckId}. The paycheck amount and savings percentage can both be updated.
       minProperties: 1
       properties:
         paycheckDate:
@@ -928,6 +1016,8 @@ components:
         amount:
           type: number
           format: double
+          minimum: 0
+          multipleOf: 0.01
         description:
           type: string
         expenseDate:
@@ -944,6 +1034,8 @@ components:
           type: number
           format: double
           example: 75.50
+          minimum: 0
+          multipleOf: 0.01
 
     PageMeta:
       description: >-
