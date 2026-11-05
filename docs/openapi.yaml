@@ -206,60 +206,121 @@ paths:
         '404':
           $ref: '#/components/responses/NotFound'
         
-  /api/v1/user/me/paycheck-budget:
+  /api/v1/user/me/paychecks:
     get:
       tags: [User]
-      operationId: getPaycheckBudget
-      summary: Gives the current paycheck amount and savings amount for the logged in user
+      operationId: getPaycheck
+      summary: Gives a list of the paycheck and savings amount for the logged in user
       responses:
         '200':
           description: Paycheck amount and savings amount
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/PaycheckBudget'
+                type: array
+                items:
+                  $ref: '#/components/schemas/Paycheck'
         '400':
           $ref: '#/components/responses/BadRequest'
         '401':
           $ref: '#/components/responses/Unauthorized'
         '500':
           $ref: '#/components/responses/InternalError'
-    patch:
+    post:
       tags: [User]
-      operationId: updatePaycheckBudget
-      summary: Updates the current paycheck budget information
+      operationId: createPaycheck
+      summary: Creates a new paycheck for the signed-in user
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/UpdatePaycheckBudget'
+              $ref: '#/components/schemas/UpdatePaycheck'
       responses:
-        '200':
-          description: The updated paycheck budget
+        '201':
+          description: Paycheck created
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/PaycheckBudget'
+                $ref: '#/components/schemas/Paycheck'
         '400':
           $ref: '#/components/responses/BadRequest'
         '401':
           $ref: '#/components/responses/Unauthorized'
         '500':
           $ref: '#/components/responses/InternalError'
+
+
+  /api/v1/user/me/paychecks/{paycheckId}:
+    parameters:
+      - name: paycheckId
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+          example: 7
+    get:
+        tags: [User]
+        operationId: getSpecificPaycheck
+        summary: Gets a specific paycheck from user
+        responses:
+          '200':
+            description: The paycheck
+            content:
+              application/json:
+                schema:
+                  $ref: '#/components/schemas/Paycheck'
+          '400':
+            $ref: '#/components/responses/BadRequest'
+          '401':
+            $ref: '#/components/responses/Unauthorized'
+          '404':
+            $ref: '#/components/responses/NotFound'
+          '500':
+            $ref: '#/components/responses/InternalError'
+    patch:
+        tags: [User]
+        operationId: patchSpecificPaycheck
+        summary: Patches a specific paycheck from the user
+        requestBody:
+          required: true
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UpdatePaycheck'
+        responses:
+          '200':
+            description: The paycheck
+            content:
+              application/json:
+                schema:
+                  $ref: '#/components/schemas/Paycheck'
+          '400':
+            $ref: '#/components/responses/BadRequest'
+          '401':
+            $ref: '#/components/responses/Unauthorized'
+          '404':
+            $ref: '#/components/responses/NotFound'
+          '500':
+            $ref: '#/components/responses/InternalError'
     delete:
-      tags: [User]
-      operationId: deletePaycheckBudget
-      summary: Delete a paycheck budget and current savings information
-      responses:
-        '204':
-          description: Paycheck and savings percentage deleted
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '404':
-          $ref: '#/components/responses/NotFound'
-        '500':
-          $ref: '#/components/responses/InternalError'
+        tags: [User]
+        operationId: deleteSpecificPaycheck
+        summary: Deletes a specific paycheck from the user
+        responses:
+          '204':
+            description: Deleted
+          '400':
+            $ref: '#/components/responses/BadRequest'
+          '401':
+            $ref: '#/components/responses/Unauthorized'
+          '403':
+            $ref: '#/components/responses/Forbidden'
+          '404':
+            $ref: '#/components/responses/NotFound'
+          '500':
+            $ref: '#/components/responses/InternalError'
 
 
   /api/v1/categories:
@@ -385,9 +446,9 @@ paths:
           $ref: '#/components/responses/InternalError'
 
 
-  /api/v1/user/me/{categoryId}/financials:
+  /api/v1/user/me/paychecks/{paycheckId}/financials:
     parameters:
-    - name: categoryId
+    - name: paycheckId
       in: path
       required: true
       schema:
@@ -403,6 +464,8 @@ paths:
           content:
             application/json:
               schema:
+                type: array
+                items:
                   $ref: '#/components/schemas/Financials'
         '401':
           $ref: '#/components/responses/Unauthorized'
@@ -410,9 +473,9 @@ paths:
           $ref: '#/components/responses/NotFound'
         '500':
           $ref: '#/components/responses/InternalError'
-    put:
+    post:
       tags: [Financials]
-      operationId: putMyFinancials
+      operationId: postMyFinancials
       summary: Creates a new financial information for the signed-in user per category (impotent, will replace exisiting financial info)
       requestBody:
         required: true
@@ -439,10 +502,42 @@ paths:
           $ref: '#/components/responses/Unauthorized'
         '500':
           $ref: '#/components/responses/InternalError'
+
+  /api/v1/user/me/paychecks/{paycheckId}/financials/{financialId}:
+    parameters:
+    - name: paycheckId
+      in: path
+      required: true
+      schema:
+        type: integer
+        format: int64
+    - name: financialId
+      in: path
+      required: true
+      schema:
+        type: integer
+        format: int64
+    get:
+      tags: [Financials]
+      operationId: getMyFinancialsWithId
+      summary: Gets financials per category per id for the signed-in user
+      responses:
+        '200':
+          description: The user's financials
+          content:
+            application/json:
+              schema:
+                  $ref: '#/components/schemas/Financials'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
     patch:
       tags: [Financials]
       operationId: updateMyFinancials
-      summary: Updates the spent amount for financials in this category
+      summary: Updates the set amount for financials in this category
       requestBody:
         required: true
         content:
@@ -477,6 +572,141 @@ paths:
           $ref: '#/components/responses/InternalError'
 
 
+  /api/v1/user/me/paychecks/{paycheckId}/financials/{financialId}/expenses:
+    parameters:
+      - name: paycheckId
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+      - name: financialId
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+    get:
+      tags: [Financials]
+      operationId: getExpenses
+      summary: Gets all expenses for a financial allocation
+      responses:
+        '200':
+          description: List of expenses
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Expense'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+    post:
+      tags: [Financials]
+      operationId: createExpense
+      summary: Creates an expense for a financial allocation
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ExpenseCreate'
+      responses:
+        '201':
+          description: Expense created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Expense'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /api/v1/user/me/paychecks/{paycheckId}/financials/{financialId}/expenses/{expenseId}:
+    parameters:
+      - name: paycheckId
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+      - name: financialId
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+      - name: expenseId
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+    get:
+      tags: [Financials]
+      operationId: getExpense
+      summary: Gets a specific expense
+      responses:
+        '200':
+          description: The expense
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Expense'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+    patch:
+      tags: [Financials]
+      operationId: updateExpense
+      summary: Updates an expense
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateExpense'
+      responses:
+        '200':
+          description: The updated expense
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Expense'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+    delete:
+      tags: [Financials]
+      operationId: deleteExpense
+      summary: Deletes an expense
+      responses:
+        '204':
+          description: Expense deleted
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
 
 
 components:
@@ -510,7 +740,7 @@ components:
 
 
   schemas:
-    PaycheckBudget:
+    Paycheck:
       type: object
       required: [id, paycheckAmount, savingsPercent]
       properties:
@@ -527,12 +757,20 @@ components:
           type: number
           format: double
           example: 20.5
+        paycheckDate:
+          type: string
+          format: date
+          example: "2026-11-04"
     
-    UpdatePaycheckBudget:
+    UpdatePaycheck:
       type: object
       description: Body for PATCH /api/v1/user/me/paycheck-budget. The paycheck amount and savings percentage can both be updated.
       minProperties: 1
       properties:
+        paycheckDate:
+          type: string
+          format: date
+          example: "2026-11-04"
         paycheckAmount:
           type: number
           format: double
@@ -544,12 +782,17 @@ components:
 
     Category:
       type: object
-      required: [id, name, is_active]
+      required: [id, createdByUserId, name, is_active]
       properties:
         id: 
           type: integer
           format: int64
           example: 7
+        createdByUserId:
+          type: integer
+          format: int64
+          nullable: true
+          description: User who created the category. Null for shared categories.
         name:
           type: string
           example: "groceries"
@@ -595,18 +838,22 @@ components:
 
     Financials:
       type: object
-      required: [id, categoryId]
+      required: [id, paycheckId, categoryId, setAmount]
       properties:
         id:
           type: integer
           format: int64
           readOnly: true
           example: 15
+        paycheckId:
+          type: integer
+          format: int64
+          example: 26
         categoryId:
           type: integer
           format: int64
           example: 7
-        spentAmount:
+        setAmount:
           type: number
           format: double
           example: 75.50
@@ -614,20 +861,72 @@ components:
 
     FinancialsCreate:
       type: object 
-      required: [spentAmount]
+      required: [categoryId, setAmount]
       properties:
-        spentAmount:
+        categoryId:
+          type: integer
+          format: int64
+        setAmount:
           type: number
           format: double
           example: 75.50
 
 
-    UpdateFinancials:
-      description: The only editable field is the spentAmount
+    Expense:
       type: object
-      required: [spentAmount]
+      required: [id, financialId, amount, expenseDate]
       properties:
-        spentAmount:
+        id:
+          type: integer
+          format: int64
+          readOnly: true
+        financialId:
+          type: integer
+          format: int64
+        amount:
+          type: number
+          format: double
+        description:
+          type: string
+        expenseDate:
+          type: string
+          format: date
+
+
+    ExpenseCreate:
+      type: object
+      required: [amount, expenseDate]
+      properties:
+        amount:
+          type: number
+          format: double
+        description:
+          type: string
+        expenseDate:
+          type: string
+          format: date
+
+
+    UpdateExpense:
+      type: object
+      minProperties: 1
+      properties:
+        amount:
+          type: number
+          format: double
+        description:
+          type: string
+        expenseDate:
+          type: string
+          format: date
+
+
+    UpdateFinancials:
+      description: The only editable field is the setAmount
+      type: object
+      required: [setAmount]
+      properties:
+        setAmount:
           type: number
           format: double
           example: 75.50
