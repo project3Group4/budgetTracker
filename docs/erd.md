@@ -14,7 +14,6 @@ erDiagram
         string email
         string display_name
         string role
-        datetime created_at
     }
 
     PAYCHECK {
