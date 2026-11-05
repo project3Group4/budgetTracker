@@ -1,4 +1,4 @@
-# Starter OpenAPI contract for CST 438 Project 02.
+# Starter OpenAPI contract for CST 438 Project 03.
 # Render it:   https://editor.swagger.io  (File > Import file, or paste)
 # Lint it:     npx @redocly/cli lint docs/openapi.yaml
 # Mock it:     npx @stoplight/prism-cli mock docs/openapi.yaml   -> http://127.0.0.1:4010
@@ -16,7 +16,7 @@ info:
     url: https://opensource.org/licenses/MIT
   contact:
     name: Team 04
-    url: https://github.com/project3Group4/budgetTracker/tree/main
+    url: https://github.com/project3Group4/budgetTracker
 
 
 servers:
@@ -36,10 +36,10 @@ tags:
     description: The signed-in user's own account
   - name: Admin
     description: Admin-only user management
-  - name: PaycheckBudget
-    description: The signed-in user's paycheck amount and savings percent
   - name: Category
     description: The application's spending categories
+  - name: Financials
+    description: The user's finances based on category
 
 
 paths:
@@ -74,11 +74,18 @@ paths:
           description: Deleted. The token is now useless.
         '401':
           $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
     patch:
       tags: [User]
       operationId: updateDisplayName
       summary: Updates my own display name
-      description: Any signed-in user. Allows the user to change their display name.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MyUserPatch'
       responses:
         '500':
           $ref: '#/components/responses/InternalError'
@@ -201,9 +208,9 @@ paths:
         
   /api/v1/user/me/paycheck-budget:
     get:
-      tags: [PaycheckBudget]
+      tags: [User]
       operationId: getPaycheckBudget
-      summary: Gives the current paycheck amount and savings amount
+      summary: Gives the current paycheck amount and savings amount for the logged in user
       responses:
         '200':
           description: Paycheck amount and savings amount
@@ -217,50 +224,119 @@ paths:
           $ref: '#/components/responses/Unauthorized'
         '500':
           $ref: '#/components/responses/InternalError'
-    post:
-      tags: [MealPlans]
-      operationId: createMealPlan
-      summary: Create a new weekly meal plan
+    patch:
+      tags: [User]
+      operationId: updatePaycheckBudget
+      summary: Updates the current paycheck budget information
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/MealPlanCreate'
+              $ref: '#/components/schemas/UpdatePaycheckBudget'
+      responses:
+        '200':
+          description: The updated paycheck budget
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaycheckBudget'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalError'
+    delete:
+      tags: [User]
+      operationId: deletePaycheckBudget
+      summary: Delete a paycheck budget and current savings information
+      responses:
+        '204':
+          description: Paycheck and savings percentage deleted
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+
+  /api/v1/categories:
+    get:
+      tags: [Category]
+      operationId: getCategories
+      summary: Gets all categories in a page
+      parameters:
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/Size'
+      responses:
+        '200':
+          description: One page of categories
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CategoryPage'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalError'
+    post:
+      tags: [Category]
+      operationId: createCategory
+      summary: Creates a new category (admin only)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CategoryCreate'
       responses:
         '201':
-          description: Meal plan created
+          description: URL of new category
           headers:
             Location:
-              description: URL of the new meal plan
               schema:
                 type: string
-                example: /api/v1/meal-plans/67
+                example: /api/v1/categories/67
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/MealPlan'
+                $ref: '#/components/schemas/Category'
         '400':
           $ref: '#/components/responses/BadRequest'
         '401':
           $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
         '500':
           $ref: '#/components/responses/InternalError'
 
-  /api/v1/meal-plans/{mealPlanId}:
+
+  /api/v1/categories/{categoryId}:
     parameters:
-      - $ref: '#/components/parameters/MealPlanId'
+      - name: categoryId
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+          example: 7
     get:
-      tags: [MealPlans]
-      operationId: getMealPlan
-      summary: Get one meal plan and its entries
+      tags: [Category]
+      operationId: getCategoryById
+      summary: Gets a category by it's id
       responses:
         '200':
-          description: The requested meal plan
+          description: The category
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/MealPlan'
+                $ref: '#/components/schemas/Category'
+        '400':
+          $ref: '#/components/responses/BadRequest'
         '401':
           $ref: '#/components/responses/Unauthorized'
         '404':
@@ -268,117 +344,131 @@ paths:
         '500':
           $ref: '#/components/responses/InternalError'
     patch:
-      tags: [MealPlans]
-      operationId: updateMealPlan
-      summary: Change a meal plan
+      tags: [Category]
+      operationId: patchCategory
+      summary: Updates boolean is_active (admin only)
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/MealPlanPatch'
+              $ref: '#/components/schemas/UpdateCategory'
       responses:
         '200':
-          description: The updated meal plan
+          description: The updated category
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/MealPlan'
+                $ref: '#/components/schemas/Category'
         '400':
           $ref: '#/components/responses/BadRequest'
         '401':
           $ref: '#/components/responses/Unauthorized'
-        '404':
-          $ref: '#/components/responses/NotFound'
+        '403':
+          $ref: '#/components/responses/Forbidden'
         '500':
           $ref: '#/components/responses/InternalError'
     delete:
-      tags: [MealPlans]
-      operationId: deleteMealPlan
-      summary: Delete a meal plan and its entries
+      tags: [Category]
+      operationId: deleteCategory
+      summary: Deletes category (admin only)
       responses:
         '204':
-          description: Meal plan and its entries deleted
+          description: Category deleted
         '401':
           $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
         '404':
           $ref: '#/components/responses/NotFound'
         '500':
           $ref: '#/components/responses/InternalError'
-  /api/v1/meal-plans/{mealPlanId}/entries:
-    parameters:
-      - $ref: '#/components/parameters/MealPlanId'
 
+
+  /api/v1/user/me/{categoryId}/financials:
+    parameters:
+    - name: categoryId
+      in: path
+      required: true
+      schema:
+        type: integer
+        format: int64
     get:
-      tags: [MealPlans]
-      operationId: listMealPlanEntries
-      summary: List the meals in a meal plan
+      tags: [Financials]
+      operationId: getMyFinancials
+      summary: Gets financials per category for the signed-in user
       responses:
         '200':
-          description: The planned meals in the meal plan
+          description: The user's financials
           content:
             application/json:
               schema:
-                type: array
-                items:
-                  $ref: '#/components/schemas/MealPlanEntry'
+                  $ref: '#/components/schemas/Financials'
         '401':
           $ref: '#/components/responses/Unauthorized'
         '404':
           $ref: '#/components/responses/NotFound'
         '500':
           $ref: '#/components/responses/InternalError'
-
-    post:
-      tags: [MealPlans]
-      operationId: addMealPlanEntry
-      summary: Add a recipe to a meal plan
+    put:
+      tags: [Financials]
+      operationId: putMyFinancials
+      summary: Creates a new financial information for the signed-in user per category (impotent, will replace exisiting financial info)
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/MealPlanEntryCreate'
+              $ref: '#/components/schemas/FinancialsCreate'
       responses:
         '201':
-          description: Meal added to the meal plan
+          description: Created financial information
+          headers:
+            Location:
+              description: URL of the new finance info
+              schema:
+                type: string
+                example: /api/v1/user/me/7/financials
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/MealPlanEntry'
+                $ref: '#/components/schemas/Financials'
         '400':
           $ref: '#/components/responses/BadRequest'
         '401':
           $ref: '#/components/responses/Unauthorized'
-        '404':
-          $ref: '#/components/responses/NotFound'
         '500':
           $ref: '#/components/responses/InternalError'
-          
-  /api/v1/meal-plans/{mealPlanId}/entries/{entryId}:
-    parameters:
-      - $ref: '#/components/parameters/MealPlanId'
-      - $ref: '#/components/parameters/EntryId'
-
     patch:
-      tags: [MealPlans]
-      operationId: updateMealPlanEntry
-      summary: Change a planned meal
+      tags: [Financials]
+      operationId: updateMyFinancials
+      summary: Updates the spent amount for financials in this category
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/MealPlanEntryPatch'
+              $ref: '#/components/schemas/UpdateFinancials'
       responses:
         '200':
-          description: The updated planned meal
+          description: The updated category
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/MealPlanEntry'
+                $ref: '#/components/schemas/Financials'
         '400':
           $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalError'
+    delete:
+      tags: [Financials]
+      operationId: deleteMyFinancials
+      summary: Deletes the financial for this category
+      responses:
+        '204':
+          description: Financial deleted
         '401':
           $ref: '#/components/responses/Unauthorized'
         '404':
@@ -386,19 +476,7 @@ paths:
         '500':
           $ref: '#/components/responses/InternalError'
 
-    delete:
-      tags: [MealPlans]
-      operationId: deleteMealPlanEntry
-      summary: Remove a planned meal
-      responses:
-        '204':
-          description: Planned meal removed
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '404':
-          $ref: '#/components/responses/NotFound'
-        '500':
-          $ref: '#/components/responses/InternalError'
+
 
 
 components:
@@ -411,33 +489,6 @@ components:
 
 
   parameters:
-    RecipeId:
-      name: recipeId
-      in: path
-      required: true
-      schema:
-        type: integer
-        format: int64
-        example: 42
-        
-    MealPlanId:
-      name: mealPlanId
-      in: path
-      required: true
-      schema:
-        type: integer
-        format: int64
-        example: 67
-    
-    EntryId:
-      name: entryId
-      in: path
-      required: true
-      schema:
-        type: integer
-        format: int64
-        example: 54
-        
     Page:
       name: page
       in: query
@@ -459,226 +510,127 @@ components:
 
 
   schemas:
-    MealPlan:
+    PaycheckBudget:
       type: object
-      required: [id, weekStart, entries]
+      required: [id, paycheckAmount, savingsPercent]
       properties:
         id:
           type: integer
           format: int64
           readOnly: true
-          example: 67
-        weekStart:
-          type: string
-          format: date
-          example: "2026-10-05"
-        entries:
-          type: array
-          items:
-            $ref: '#/components/schemas/MealPlanEntry'
+          example: 69
+        paycheckAmount:
+          type: number
+          format: double
+          example: 420.67
+        savingsPercent:
+          type: number
+          format: double
+          example: 20.5
     
-    MealPlanEntry:
+    UpdatePaycheckBudget:
       type: object
-      required: [id, mealPlanId, recipeId, plannedDate, mealType]
-      properties:
-        id:
-          type: integer
-          format: int64
-          readOnly: true
-          example: 54
-        mealPlanId:
-          type: integer
-          format: int64
-          readOnly: true
-          example: 23
-        recipeId:
-          type: integer
-          format: int64
-          example: 22
-        plannedDate:
-          type: string
-          format: date
-          example: "2026-10-01"
-        mealType:
-          type: string
-          enum: [BREAKFAST, LUNCH, DINNER]
-          example: DINNER
-    
-    MealPlanCreate:
-      description: Body for POST. Creates a weekly meal plan that may start with no entries.
-      type: object
-      required: [weekStart]
-      properties:
-        weekStart:
-          type: string
-          format: date
-          example: "2026-10-05"
-
-    MealPlanPatch:
-      description: Body for PATCH. Send only the fields you want to change.
-      type: object
+      description: Body for PATCH /api/v1/user/me/paycheck-budget. The paycheck amount and savings percentage can both be updated.
       minProperties: 1
       properties:
-        weekStart:
-          type: string
-          format: date 
-          example: "2020-12-04"
+        paycheckAmount:
+          type: number
+          format: double
+          example: 420.67
+        savingsPercent:
+          type: number
+          format: double
+          example: 20.5
 
-    MealPlanEntryCreate:
-      description: Body for POST. Adds a recipe to a meal plan.
+    Category:
       type: object
-      required: [recipeId, plannedDate, mealType]
+      required: [id, name, is_active]
       properties:
-        recipeId:
+        id: 
           type: integer
           format: int64
-          example: 57
-        plannedDate:
+          example: 7
+        name:
           type: string
-          format: date
-          description: Must be within the meal plan's week (weekStart through weekStart + 6 days), otherwise 400.
-          example: "2026-10-07"
-        mealType:
-          type: string
-          enum: [BREAKFAST, LUNCH, DINNER]
-          example: LUNCH
+          example: "groceries"
+        is_active:
+          type: boolean
+          example: True
 
-    MealPlanEntryPatch:
-      description: Body for PATCH. Send only the fields you want to change.
-      type: object
-      minProperties: 1
-      properties:
-        recipeId:
-          type: integer
-          format: int64
-          example: 57
-        plannedDate:
-          type: string
-          format: date
-          description: Must be within the meal plan's week (weekStart through weekStart + 6 days), otherwise 400.
-          example: "2026-10-07"
-        mealType:
-          type: string
-          enum: [BREAKFAST, LUNCH, DINNER]
-          example: LUNCH
-          
-    MealPlanPage:
+
+    CategoryPage:
       type: object
       required: [content, page]
       properties:
         content:
           type: array
           items:
-            $ref: '#/components/schemas/MealPlan'
+            $ref: '#/components/schemas/Category'
         page:
           $ref: '#/components/schemas/PageMeta'
 
 
-    Recipe:
+    CategoryCreate:
       type: object
-      required: [id, name, ingredients, measurements, instructions]
+      required: [name, is_active]
+      properties:
+        name:
+          type: string
+          example: "groceries"
+        is_active:
+          type: boolean
+          example: True
+
+
+    UpdateCategory:
+      description: Body for PATCH /api/v1/categories/{categoryId}. The only editable field is the boolean
+      type: object
+      required: [is_active]
+      properties:
+        is_active:
+          type: boolean
+          example: True
+
+
+
+    Financials:
+      type: object
+      required: [id, categoryId]
       properties:
         id:
           type: integer
           format: int64
           readOnly: true
-          example: 42
-        name:
-          type: string
-          example: Brown Sugar Oatmeal
-        createdAt:
-          type: string
-          format: date-time
-          readOnly: true
-        ingredients:
-          type: array
-          items:
-            $ref: '#/components/schemas/Ingredient'
-        measurements:
-          type: string
-          nullable: true
-          example: ½ cup
-        instructions:
-          type: string
-          nullable: true
-          example: Instructions for a recipe
-
-
-    RecipeCreate:
-      description: Body for POST and PUT. PUT replaces every field.
-      type: object
-      required: [name, ingredientIds, measurements, instructions]
-      properties:
-        name:
-          type: string
-          minLength: 1
-          example: Brown Sugar Oatmeal
-        ingredientIds:
-          type: array
-          items:
-            type: integer
-            format: int64
-          example: [1, 2, 3]
-        measurements:
-          type: string
-          nullable: true
-          example: ½ cup
-        instructions:
-          type: string
-          nullable: true
-          example: Instructions for a recipe
-
-
-    IngredientCreate:
-      description: Body for POST and PUT. PUT replaces every field.
-      type: object
-      required: [ingredientName]
-      properties:
-        ingredientName:
-          type: string
-          nullable: true
-          example: Brown Sugar
-
-
-    RecipePatch:
-      description: Body for PATCH. Send only the fields you want to change.
-      type: object
-      minProperties: 1
-      properties:
-        name:
-          type: string
-          minLength: 1
-          example: Updated Recipe Name
-        ingredientIds:
-          type: array
-          items:
-            type: integer
-            format: int64
-          example: [1, 3]
-        measurements:
-          type: string
-          nullable: true
-          example: ½ cup
-        instructions:
-          type: string
-          nullable: true
-          example: Instructions for a recipe
-
-
-    Ingredient:
-      type: object
-      required: [id, ingredientName]
-      properties:
-        id:
+          example: 15
+        categoryId:
           type: integer
           format: int64
-          readOnly: true
-          example: 67
-        ingredientName:
-          type: string
-          nullable: true
-          example: Apple Slices
+          example: 7
+        spentAmount:
+          type: number
+          format: double
+          example: 75.50
 
+
+    FinancialsCreate:
+      type: object 
+      required: [spentAmount]
+      properties:
+        spentAmount:
+          type: number
+          format: double
+          example: 75.50
+
+
+    UpdateFinancials:
+      description: The only editable field is the spentAmount
+      type: object
+      required: [spentAmount]
+      properties:
+        spentAmount:
+          type: number
+          format: double
+          example: 75.50
 
     PageMeta:
       description: >-
@@ -702,30 +654,6 @@ components:
           example: 3
 
 
-    RecipePage:
-      type: object
-      required: [content, page]
-      properties:
-        content:
-          type: array
-          items:
-            $ref: '#/components/schemas/Recipe'
-        page:
-          $ref: '#/components/schemas/PageMeta'
-
-
-    IngredientsPage:
-      type: object
-      required: [content, page]
-      properties:
-        content:
-          type: array
-          items:
-            $ref: '#/components/schemas/Ingredient'
-        page:
-          $ref: '#/components/schemas/PageMeta'
-
-
     User:
       type: object
       required: [id, email, displayName, role]
@@ -739,8 +667,7 @@ components:
           format: email
           example: sam@csumb.edu
         displayName:
-          type: string
-          example: Sam Otter
+          $ref: '#/components/schemas/DisplayName'
         role:
           $ref: '#/components/schemas/Role'
 
@@ -750,8 +677,22 @@ components:
       enum: [USER, ADMIN]
 
 
+    DisplayName:
+      type: string
+      example: Sam Otter
+
+
+    MyUserPatch:
+      description: Body for PATCH /api/v1/user/me. The only editable field is the display name.
+      type: object
+      required: [displayName]
+      properties:
+        displayName:
+          $ref: '#/components/schemas/DisplayName'
+
+
     UserPatch:
-      description: Body for PATCH /api/v1/users/{userId}. Today the only editable field is the role.
+      description: Body for PATCH /api/v1/user/{userId}. Today the only editable field is the role.
       type: object
       required: [role]
       properties:
@@ -787,10 +728,10 @@ components:
           example: 404
         detail:
           type: string
-          example: Recipe 42 not found
+          example: Category 42 not found
         instance:
           type: string
-          example: /api/v1/recipes/42
+          example: /api/v1/categories/42
 
 
   responses:
@@ -831,7 +772,7 @@ components:
           example:
             title: Not Found
             status: 404
-            detail: Recipe 42 not found
+            detail: Category 42 not found
     InternalError:
       description: Unexpected server error. Your app still needs to show something useful.
       content:
