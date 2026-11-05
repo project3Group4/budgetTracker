@@ -34,8 +34,24 @@ dependencies {
 	testImplementation 'org.springframework.boot:spring-boot-starter-validation-test'
 	testImplementation 'org.springframework.boot:spring-boot-starter-webmvc-test'
 	testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+
+	implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
+	runtimeOnly 'org.postgresql:postgresql'
+	implementation 'io.github.cdimascio:dotenv-java:3.0.0'
 }
 
 tasks.named('test') {
-	useJUnitPlatform()
+	useJUnitPlatform{
+			excludeTags 'neon'
+	}
+}
+
+// also coming straight from project 2 because I thought this was cool
+// change test in run config to dbtest or run ./gradlew dbtest
+tasks.register('dbtest', Test) {
+	testClassesDirs = sourceSets.test.output.classesDirs
+	classpath = sourceSets.test.runtimeClasspath
+	useJUnitPlatform {
+		includeTags 'neon'
+	}
 }
