@@ -256,11 +256,11 @@ paths:
         '404':
           $ref: '#/components/responses/NotFound'
         
-  /api/v1/user/me/paychecks:
+  /api/v1/user/me/paycheck:
     get:
       tags: [User]
-      operationId: getMyPaychecks
-      summary: Gives a list of the paycheck and savings amount for the logged in user. Returns 404 if the paycheck does not exist or belongs to another user.
+      operationId: getMyPaycheck
+      summary: Gives the current paycheck belonging to the user.
       responses:
         '200':
           description: Paycheck amount and savings amount
@@ -278,10 +278,10 @@ paths:
           $ref: '#/components/responses/NotFound'
         '500':
           $ref: '#/components/responses/InternalError'
-    post:
+    put:
       tags: [User]
       operationId: createPaycheck
-      summary: Creates a new paycheck for the signed-in user that belongs to the user
+      summary: Creates a new paycheck for the signed-in user that belongs to the user. Will replace current paycheck the user has as well as all financial information.
       requestBody:
         required: true
         content:
@@ -301,40 +301,10 @@ paths:
           $ref: '#/components/responses/Unauthorized'
         '500':
           $ref: '#/components/responses/InternalError'
-
-
-  /api/v1/user/me/paychecks/{paycheckId}:
-    parameters:
-      - name: paycheckId
-        in: path
-        required: true
-        schema:
-          type: integer
-          format: int64
-          example: 7
-    get:
-        tags: [User]
-        operationId: getSpecificPaycheck
-        summary: Gets a specific paycheck from user. Returns 404 if the paycheck does not exist or belongs to another user.
-        responses:
-          '200':
-            description: The paycheck
-            content:
-              application/json:
-                schema:
-                  $ref: '#/components/schemas/Paycheck'
-          '400':
-            $ref: '#/components/responses/BadRequest'
-          '401':
-            $ref: '#/components/responses/Unauthorized'
-          '404':
-            $ref: '#/components/responses/NotFound'
-          '500':
-            $ref: '#/components/responses/InternalError'
     patch:
         tags: [User]
-        operationId: patchSpecificPaycheck
-        summary: Patches a specific paycheck from the user that belongs to the user
+        operationId: patchPaycheck
+        summary: Patches information like the amount and savings percentage in that user's paycheck
         requestBody:
           required: true
           content:
@@ -358,8 +328,8 @@ paths:
             $ref: '#/components/responses/InternalError'
     delete:
         tags: [User]
-        operationId: deleteSpecificPaycheck
-        summary: Deletes a specific paycheck from the user that belongs to the user
+        operationId: deletePaycheck
+        summary: Deletes paycheck from the user that belongs to the user
         responses:
           '204':
             description: Deleted
@@ -528,7 +498,7 @@ paths:
     post:
       tags: [Financials]
       operationId: postMyFinancials
-      summary: Creates a new financial information for the signed-in user per paycheck. Multiple can be made but there shouldn't be more than one per category.
+      summary: Creates a new financial information for the signed-in user for the paycheck. Multiple can be made but there shouldn't be more than one per category.
       requestBody:
         required: true
         content:
@@ -572,7 +542,7 @@ paths:
     get:
       tags: [Financials]
       operationId: getMyFinancialsWithId
-      summary: Gets financials per paycheck per id for the signed-in user
+      summary: Gets financials for that paycheck per financial id for the signed-in user
       responses:
         '200':
           description: The user's financials
@@ -847,20 +817,12 @@ components:
           example: 20.5
           minimum: 0
           maximum: 100
-        paycheckDate:
-          type: string
-          format: date
-          example: "2026-11-04"
     
     UpdatePaycheck:
       type: object
       description: Body for PATCH /api/v1/user/me/paychecks/{paycheckId}. The paycheck amount and savings percentage can both be updated.
       minProperties: 1
       properties:
-        paycheckDate:
-          type: string
-          format: date
-          example: "2026-11-04"
         paycheckAmount:
           type: number
           format: double
@@ -988,9 +950,6 @@ components:
           multipleOf: 0.01
         description:
           type: string
-        expenseDate:
-          type: string
-          format: date
 
 
     ExpenseCreate:
