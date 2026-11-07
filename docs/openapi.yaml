@@ -907,7 +907,7 @@ components:
 
     Expense:
       type: object
-      required: [id, financialId, amount, expenseDate]
+      required: [id, financialId, amount]
       properties:
         id:
           type: integer
@@ -927,7 +927,7 @@ components:
 
     ExpenseCreate:
       type: object
-      required: [amount, expenseDate]
+      required: [amount]
       properties:
         amount:
           type: number
@@ -936,9 +936,6 @@ components:
           multipleOf: 0.01
         description:
           type: string
-        expenseDate:
-          type: string
-          format: date
 
 
     UpdateExpense:
@@ -952,9 +949,6 @@ components:
           multipleOf: 0.01
         description:
           type: string
-        expenseDate:
-          type: string
-          format: date
 
 
     UpdateFinancials:
