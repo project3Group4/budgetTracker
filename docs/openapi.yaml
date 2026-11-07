@@ -466,14 +466,7 @@ paths:
           $ref: '#/components/responses/InternalError'
 
 
-  /api/v1/user/me/paychecks/{paycheckId}/financials:
-    parameters:
-    - name: paycheckId
-      in: path
-      required: true
-      schema:
-        type: integer
-        format: int64
+  /api/v1/user/me/paycheck/financials:
     get:
       tags: [Financials]
       operationId: getMyFinancials
@@ -511,7 +504,7 @@ paths:
               description: URL of the new finance info
               schema:
                 type: string
-                example: /api/v1/user/me/paychecks/7/financials/15
+                example: /api/v1/user/me/paycheck/financials/15
           content:
             application/json:
               schema:
@@ -523,14 +516,8 @@ paths:
         '500':
           $ref: '#/components/responses/InternalError'
 
-  /api/v1/user/me/paychecks/{paycheckId}/financials/{financialId}:
+  /api/v1/user/me/paycheck/financials/{financialId}:
     parameters:
-    - name: paycheckId
-      in: path
-      required: true
-      schema:
-        type: integer
-        format: int64
     - name: financialId
       in: path
       required: true
@@ -592,14 +579,8 @@ paths:
           $ref: '#/components/responses/InternalError'
 
 
-  /api/v1/user/me/paychecks/{paycheckId}/financials/{financialId}/expenses:
+  /api/v1/user/me/paycheck/financials/{financialId}/expenses:
     parameters:
-      - name: paycheckId
-        in: path
-        required: true
-        schema:
-          type: integer
-          format: int64
       - name: financialId
         in: path
         required: true
@@ -651,14 +632,8 @@ paths:
         '500':
           $ref: '#/components/responses/InternalError'
 
-  /api/v1/user/me/paychecks/{paycheckId}/financials/{financialId}/expenses/{expenseId}:
+  /api/v1/user/me/paycheck/financials/{financialId}/expenses/{expenseId}:
     parameters:
-      - name: paycheckId
-        in: path
-        required: true
-        schema:
-          type: integer
-          format: int64
       - name: financialId
         in: path
         required: true
