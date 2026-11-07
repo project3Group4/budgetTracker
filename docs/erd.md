@@ -1,8 +1,9 @@
 # Budget Tracker ERD
 
 ```mermaid
+
 erDiagram
-    USER ||--o{ PAYCHECK : receives
+    USER ||--o| PAYCHECK : has_active
     PAYCHECK ||--o{ FINANCIALS : allocates
     CATEGORY ||--o{ FINANCIALS : has_amount_for
     FINANCIALS ||--o{ EXPENSE : tracks
@@ -16,12 +17,25 @@ erDiagram
         string role
     }
 
+    AUTH_ACCOUNT {
+        int auth_account_id PK
+        int user_id FK
+        string provider
+        string provider_user_id
+    }
+
     PAYCHECK {
         int paycheck_id PK
-        int user_id FK
+        int user_id FK,UK
         decimal paycheck_amount
-        decimal savings_percentage
-        date paycheck_date
+        decimal savings_percent
+    }
+
+    CATEGORY {
+        int category_id PK
+        int created_by_user_id FK
+        string name
+        boolean is_active
     }
 
     FINANCIALS {
@@ -31,25 +45,11 @@ erDiagram
         decimal set_amount
     }
 
-    CATEGORY {
-        int category_id PK
-        int created_by_user_id FK "nullable for shared categories"
-        string name
-        boolean is_active
-    }
-
     EXPENSE {
         int expense_id PK
         int financial_id FK
         decimal amount
         string description
-        date expense_date
     }
 
-    AUTH_ACCOUNT {
-        int auth_account_id PK
-        int user_id FK
-        string provider
-        string provider_user_id
-    }
 ```
