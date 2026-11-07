@@ -1,0 +1,1146 @@
+# Starter OpenAPI contract for CST 438 Project 03.
+# Render it:   https://editor.swagger.io  (File > Import file, or paste)
+# Lint it:     npx @redocly/cli lint docs/openapi.yaml
+# Mock it:     npx @stoplight/prism-cli mock docs/openapi.yaml   -> http://127.0.0.1:4010
+openapi: 3.0.3
+
+
+info:
+  title: Budgeting API
+  version: 1.0.0
+  description: |
+    API for our budgeting application.
+    Every error uses RFC 9457 Problem Details (see components/schemas/Problem).
+  license:
+    name: MIT
+    url: https://opensource.org/licenses/MIT
+  contact:
+    name: Team 04
+    url: https://github.com/project3Group4/budgetTracker
+
+
+servers:
+  - url: http://localhost:8080
+    description: Local (docker compose up)
+  - url: https://budget-api.example.com
+    description: Production (replace when set up)
+
+
+# Every endpoint requires a Bearer token unless it overrides this with `security: []`.
+security:
+  - bearerAuth: []
+
+
+tags:
+  - name: Auth
+    description: Authentication based api routes
+  - name: User
+    description: The signed-in user's own account
+  - name: Admin
+    description: Admin-only user management
+  - name: Category
+    description: The application's spending categories
+  - name: Financials
+    description: The user's finances based on category
+
+
+paths:
+  /auth/github:
+    post:
+      tags: [Auth]
+      operationId: authWithGitHub
+      summary: Authenticate using GitHub
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/GithubAuthRequest'
+      responses:
+        '200':
+          description: Successful authentication. Returns the application JWT as well as user information.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /auth/google:
+    post:
+      tags: [Auth]
+      operationId: authWithGoogle
+      summary: Authenticate with Google
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/GoogleAuthRequest'
+      responses:
+        '200':
+          description: Successful authentication. Returns the application JWT as well as user information.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+
+
+  /api/v1/user/me:
+    get:    
+      tags: [User]
+      operationId: getMe
+      summary: Get the signed-in user
+      description: Returns the authenticated user's account information. The user ID is derived from the authentication token.
+      responses:
+        '200':
+          description: The signed-in user
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalError'
+    delete:
+      tags: [User]
+      operationId: deleteMyAccount
+      summary: Delete my own account and ALL my data
+      description: Any signed-in user. Deletes the user row and everything they own (expenses, paycheck, etc).
+      responses:
+        '500':
+          $ref: '#/components/responses/InternalError'
+        '204':
+          description: Deleted. The token is now useless.
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    patch:
+      tags: [User]
+      operationId: updateDisplayName
+      summary: Updates my own display name
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MyUserPatch'
+      responses:
+        '500':
+          $ref: '#/components/responses/InternalError'
+        '200':
+          description: The updated user
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+
+  /api/v1/user:
+    get:
+      tags: [Admin]
+      operationId: listUsers
+      summary: List all users (admin only)
+      parameters:
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/Size'
+      responses:
+        '500':
+          $ref: '#/components/responses/InternalError'
+        '200':
+          description: One page of users
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserPage'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+
+  /api/v1/user/{userId}:
+    parameters:
+      - name: userId
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+          example: 7
+    get:
+      tags: [Admin]
+      operationId: getUser
+      summary: View one user (admin only)
+      responses:
+        '500':
+          $ref: '#/components/responses/InternalError'
+        '200':
+          description: The user
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    patch:
+      tags: [Admin]
+      operationId: updateUserRole
+      summary: Grant or revoke admin (admin only)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UserPatch'
+      responses:
+        '500':
+          $ref: '#/components/responses/InternalError'
+        '200':
+          description: The updated user
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    delete:
+      tags: [Admin]
+      operationId: deleteUser
+      summary: Delete a user and all their data (admin only)
+      description: Requires the ADMIN role. A USER token gets 403.
+      responses:
+        '500':
+          $ref: '#/components/responses/InternalError'
+        '204':
+          description: Deleted
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        
+  /api/v1/user/me/paycheck:
+    get:
+      tags: [User]
+      operationId: getMyPaycheck
+      summary: Gives the current paycheck belonging to the user.
+      responses:
+        '200':
+          description: Paycheck amount and savings amount
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Paycheck'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+    put:
+      tags: [User]
+      operationId: createPaycheck
+      summary: Creates a new paycheck for the signed-in user that belongs to the user. Will replace current paycheck the user has as well as all financial information.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdatePaycheck'
+      responses:
+        '201':
+          description: Paycheck created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Paycheck'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalError'
+    patch:
+        tags: [User]
+        operationId: patchPaycheck
+        summary: Patches information like the amount and savings percentage in that user's paycheck
+        requestBody:
+          required: true
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UpdatePaycheck'
+        responses:
+          '200':
+            description: The paycheck
+            content:
+              application/json:
+                schema:
+                  $ref: '#/components/schemas/Paycheck'
+          '400':
+            $ref: '#/components/responses/BadRequest'
+          '401':
+            $ref: '#/components/responses/Unauthorized'
+          '404':
+            $ref: '#/components/responses/NotFound'
+          '500':
+            $ref: '#/components/responses/InternalError'
+    delete:
+        tags: [User]
+        operationId: deletePaycheck
+        summary: Deletes paycheck from the user that belongs to the user
+        responses:
+          '204':
+            description: Deleted
+          '400':
+            $ref: '#/components/responses/BadRequest'
+          '401':
+            $ref: '#/components/responses/Unauthorized'
+          '403':
+            $ref: '#/components/responses/Forbidden'
+          '404':
+            $ref: '#/components/responses/NotFound'
+          '500':
+            $ref: '#/components/responses/InternalError'
+
+
+  /api/v1/categories:
+    get:
+      tags: [Category]
+      operationId: getCategories
+      summary: Gets all categories in a page
+      parameters:
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/Size'
+      responses:
+        '200':
+          description: One page of categories
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CategoryPage'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalError'
+    post:
+      tags: [Category]
+      operationId: createCategory
+      summary: Creates a new category (admin only)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CategoryCreate'
+      responses:
+        '201':
+          description: URL of new category
+          headers:
+            Location:
+              schema:
+                type: string
+                example: /api/v1/categories/67
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Category'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+
+  /api/v1/categories/{categoryId}:
+    parameters:
+      - name: categoryId
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+          example: 7
+    get:
+      tags: [Category]
+      operationId: getCategoryById
+      summary: Gets a category by it's id
+      responses:
+        '200':
+          description: The category
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Category'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+    patch:
+      tags: [Category]
+      operationId: patchCategory
+      summary: Updates boolean is_active (admin only)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateCategory'
+      responses:
+        '200':
+          description: The updated category
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Category'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '500':
+          $ref: '#/components/responses/InternalError'
+    delete:
+      tags: [Category]
+      operationId: deleteCategory
+      summary: Deletes category (admin only)
+      responses:
+        '204':
+          description: Category deleted
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+
+  /api/v1/user/me/paychecks/{paycheckId}/financials:
+    parameters:
+    - name: paycheckId
+      in: path
+      required: true
+      schema:
+        type: integer
+        format: int64
+    get:
+      tags: [Financials]
+      operationId: getMyFinancials
+      summary: Gets financials per paycheck for the signed-in user and that user only.
+      responses:
+        '200':
+          description: The user's financials
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Financials'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+    post:
+      tags: [Financials]
+      operationId: postMyFinancials
+      summary: Creates a new financial information for the signed-in user for the paycheck. Multiple can be made but there shouldn't be more than one per category.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/FinancialsCreate'
+      responses:
+        '201':
+          description: Created financial information
+          headers:
+            Location:
+              description: URL of the new finance info
+              schema:
+                type: string
+                example: /api/v1/user/me/paychecks/7/financials/15
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Financials'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /api/v1/user/me/paychecks/{paycheckId}/financials/{financialId}:
+    parameters:
+    - name: paycheckId
+      in: path
+      required: true
+      schema:
+        type: integer
+        format: int64
+    - name: financialId
+      in: path
+      required: true
+      schema:
+        type: integer
+        format: int64
+    get:
+      tags: [Financials]
+      operationId: getMyFinancialsWithId
+      summary: Gets financials for that paycheck per financial id for the signed-in user
+      responses:
+        '200':
+          description: The user's financials
+          content:
+            application/json:
+              schema:
+                  $ref: '#/components/schemas/Financials'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+    patch:
+      tags: [Financials]
+      operationId: updateMyFinancials
+      summary: Updates the set amount for financials in this paycheck for this signed-in user
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateFinancials'
+      responses:
+        '200':
+          description: The updated category
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Financials'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalError'
+    delete:
+      tags: [Financials]
+      operationId: deleteMyFinancials
+      summary: Deletes the financial for this paycheck for this signed-in user
+      responses:
+        '204':
+          description: Financial deleted
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+
+  /api/v1/user/me/paychecks/{paycheckId}/financials/{financialId}/expenses:
+    parameters:
+      - name: paycheckId
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+      - name: financialId
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+    get:
+      tags: [Financials]
+      operationId: getExpenses
+      summary: Gets all expenses for a finance decision for this signed-in user
+      responses:
+        '200':
+          description: List of expenses
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Expense'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+    post:
+      tags: [Financials]
+      operationId: createExpense
+      summary: Creates an expense for a finance decision for this signed-in user
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ExpenseCreate'
+      responses:
+        '201':
+          description: Expense created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Expense'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /api/v1/user/me/paychecks/{paycheckId}/financials/{financialId}/expenses/{expenseId}:
+    parameters:
+      - name: paycheckId
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+      - name: financialId
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+      - name: expenseId
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+    get:
+      tags: [Financials]
+      operationId: getExpense
+      summary: Gets a specific expense for the signed-in user
+      responses:
+        '200':
+          description: The expense
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Expense'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+    patch:
+      tags: [Financials]
+      operationId: updateExpense
+      summary: Updates an expense for the signed-in user
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateExpense'
+      responses:
+        '200':
+          description: The updated expense
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Expense'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+    delete:
+      tags: [Financials]
+      operationId: deleteExpense
+      summary: Deletes an expense for the signed-in user
+      responses:
+        '204':
+          description: Expense deleted
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: JWT issued by this application after successful authentication with Google or GitHub. Include this token in the Authorization header as a Bearer token.
+
+
+  parameters:
+    Page:
+      name: page
+      in: query
+      description: Zero-based page number
+      schema:
+        type: integer
+        minimum: 0
+        default: 0
+        
+    Size:
+      name: size
+      in: query
+      description: Items per page
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 100
+        default: 20
+
+
+  schemas:
+    GithubAuthRequest:
+      type: object
+      required: [code, codeVerifier, redirectUri]
+      properties:
+        code:
+          type: string
+          description: Authorization code returned by GitHub.
+        codeVerifier:
+          type: string
+          description: PKCE code verifier used during the authorization flow.
+        redirectUri:
+          type: string
+          format: uri
+          description: Redirect URI used when requesting the authorization code.
+
+    GoogleAuthRequest:
+      type: object
+      required: [idToken]
+      properties:
+        idToken:
+          type: string
+          description: Google ID token obtained during Google sign-in.
+
+    AuthResponse:
+      type: object
+      required: [token, user]
+      properties:
+        token:
+          type: string
+          description: JWT issued by this application. Used to authenticate future API requests.
+          example: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9
+        user:
+          $ref: '#/components/schemas/User'
+
+    Paycheck:
+      type: object
+      required: [id, paycheckAmount, savingsPercent]
+      properties:
+        id:
+          type: integer
+          format: int64
+          readOnly: true
+          example: 69
+        paycheckAmount:
+          type: number
+          format: double
+          example: 420.67
+          minimum: 0
+          multipleOf: 0.01
+        savingsPercent:
+          type: number
+          format: double
+          example: 20.5
+          minimum: 0
+          maximum: 100
+    
+    UpdatePaycheck:
+      type: object
+      description: Body for PATCH /api/v1/user/me/paychecks/{paycheckId}. The paycheck amount and savings percentage can both be updated.
+      minProperties: 1
+      properties:
+        paycheckAmount:
+          type: number
+          format: double
+          example: 420.67
+          minimum: 0
+          multipleOf: 0.01
+        savingsPercent:
+          type: number
+          format: double
+          example: 20.5
+          minimum: 0
+          maximum: 100
+
+    Category:
+      type: object
+      required: [id, createdByUserId, name, is_active]
+      properties:
+        id: 
+          type: integer
+          format: int64
+          example: 7
+        createdByUserId:
+          type: integer
+          format: int64
+          nullable: true
+          description: User who created the category. Null for shared categories.
+        name:
+          type: string
+          example: "groceries"
+        is_active:
+          type: boolean
+          example: True
+
+
+    CategoryPage:
+      type: object
+      required: [content, page]
+      properties:
+        content:
+          type: array
+          items:
+            $ref: '#/components/schemas/Category'
+        page:
+          $ref: '#/components/schemas/PageMeta'
+
+
+    CategoryCreate:
+      type: object
+      required: [name, is_active]
+      properties:
+        name:
+          type: string
+          example: "groceries"
+        is_active:
+          type: boolean
+          example: True
+
+
+    UpdateCategory:
+      description: Body for PATCH /api/v1/categories/{categoryId}. The only editable field is the boolean
+      type: object
+      required: [is_active]
+      properties:
+        is_active:
+          type: boolean
+          example: True
+
+
+
+    Financials:
+      type: object
+      required: [id, paycheckId, categoryId, setAmount]
+      properties:
+        id:
+          type: integer
+          format: int64
+          readOnly: true
+          example: 15
+        paycheckId:
+          type: integer
+          format: int64
+          example: 26
+        categoryId:
+          type: integer
+          format: int64
+          example: 7
+        setAmount:
+          type: number
+          format: double
+          example: 75.50
+          minimum: 0
+          multipleOf: 0.01
+
+
+    FinancialsCreate:
+      type: object 
+      required: [categoryId, setAmount]
+      properties:
+        categoryId:
+          type: integer
+          format: int64
+        setAmount:
+          type: number
+          format: double
+          example: 75.50
+          minimum: 0
+          multipleOf: 0.01
+
+
+    Expense:
+      type: object
+      required: [id, financialId, amount, expenseDate]
+      properties:
+        id:
+          type: integer
+          format: int64
+          readOnly: true
+        financialId:
+          type: integer
+          format: int64
+        amount:
+          type: number
+          format: double
+          minimum: 0
+          multipleOf: 0.01
+        description:
+          type: string
+
+
+    ExpenseCreate:
+      type: object
+      required: [amount, expenseDate]
+      properties:
+        amount:
+          type: number
+          format: double
+          minimum: 0
+          multipleOf: 0.01
+        description:
+          type: string
+        expenseDate:
+          type: string
+          format: date
+
+
+    UpdateExpense:
+      type: object
+      minProperties: 1
+      properties:
+        amount:
+          type: number
+          format: double
+          minimum: 0
+          multipleOf: 0.01
+        description:
+          type: string
+        expenseDate:
+          type: string
+          format: date
+
+
+    UpdateFinancials:
+      description: The only editable field is the setAmount
+      type: object
+      required: [setAmount]
+      properties:
+        setAmount:
+          type: number
+          format: double
+          example: 75.50
+          minimum: 0
+          multipleOf: 0.01
+
+    PageMeta:
+      description: >-
+        Spring Data's PagedModel shape. Turn it on with
+        spring.data.web.pageable.serialization-mode=via_dto in application.properties.
+      type: object
+      required: [size, number, totalElements, totalPages]
+      properties:
+        size:
+          type: integer
+          example: 20
+        number:
+          type: integer
+          example: 0
+        totalElements:
+          type: integer
+          format: int64
+          example: 57
+        totalPages:
+          type: integer
+          example: 3
+
+
+    User:
+      type: object
+      required: [id, email, displayName, role]
+      properties:
+        id:
+          type: integer
+          format: int64
+          example: 7
+        email:
+          type: string
+          format: email
+          example: sam@csumb.edu
+        displayName:
+          $ref: '#/components/schemas/DisplayName'
+        role:
+          $ref: '#/components/schemas/Role'
+
+
+    Role:
+      type: string
+      enum: [USER, ADMIN]
+
+
+    DisplayName:
+      type: string
+      example: Sam Otter
+
+
+    MyUserPatch:
+      description: Body for PATCH /api/v1/user/me. The only editable field is the display name.
+      type: object
+      required: [displayName]
+      properties:
+        displayName:
+          $ref: '#/components/schemas/DisplayName'
+
+
+    UserPatch:
+      description: Body for PATCH /api/v1/user/{userId}. Today the only editable field is the role.
+      type: object
+      required: [role]
+      properties:
+        role:
+          $ref: '#/components/schemas/Role'
+
+
+    UserPage:
+      type: object
+      required: [content, page]
+      properties:
+        content:
+          type: array
+          items:
+            $ref: '#/components/schemas/User'
+        page:
+          $ref: '#/components/schemas/PageMeta'
+
+
+    Problem:
+      description: RFC 9457 Problem Details. The ONE error body every endpoint returns.
+      type: object
+      required: [title, status]
+      properties:
+        type:
+          type: string
+          default: about:blank
+        title:
+          type: string
+          example: Not Found
+        status:
+          type: integer
+          example: 404
+        detail:
+          type: string
+          example: Category 42 not found
+        instance:
+          type: string
+          example: /api/v1/categories/42
+
+
+  responses:
+    BadRequest:
+      description: Validation failed or malformed JSON
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/Problem'
+          example:
+            title: Bad Request
+            status: 400
+            detail: One or more fields failed validation. Check the request against the contract.
+    Unauthorized:
+      description: Missing or invalid token
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/Problem'
+          example:
+            title: Unauthorized
+            status: 401
+    Forbidden:
+      description: Valid token, but not allowed (for example, not an admin)
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/Problem'
+          example:
+            title: Forbidden
+            status: 403
+    NotFound:
+      description: Doesn't exist, or belongs to someone else
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/Problem'
+          example:
+            title: Not Found
+            status: 404
+            detail: Category 42 not found
+    InternalError:
+      description: Unexpected server error. Your app still needs to show something useful.
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/Problem'
+          example:
+            title: Internal Server Error
+            status: 500
