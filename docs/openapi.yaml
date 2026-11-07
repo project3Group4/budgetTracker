@@ -267,9 +267,7 @@ paths:
           content:
             application/json:
               schema:
-                type: array
-                items:
-                  $ref: '#/components/schemas/Paycheck'
+                $ref: '#/components/schemas/Paycheck'
         '400':
           $ref: '#/components/responses/BadRequest'
         '401':
