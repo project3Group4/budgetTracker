@@ -793,7 +793,7 @@ components:
     
     UpdatePaycheck:
       type: object
-      description: Body for PATCH /api/v1/user/me/paychecks/{paycheckId}. The paycheck amount and savings percentage can both be updated.
+      description: Body for PATCH /api/v1/user/me/paychecks. The paycheck amount and savings percentage can both be updated.
       minProperties: 1
       properties:
         paycheckAmount:
