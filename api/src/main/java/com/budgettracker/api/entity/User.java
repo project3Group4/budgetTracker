@@ -1,6 +1,7 @@
 package com.budgettracker.api.entity;
 
 import jakarta.persistence.*;
+import jakarta.validation.constraints.NotBlank;
 import lombok.AccessLevel;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -22,6 +23,7 @@ public class User {
     @Column(name = "user_id")
     private Long id;
 
+    @NotBlank(message = "Email cannot be empty")
     @Column(name = "email", nullable = false, unique = true)
     private String email;
 
