@@ -15,7 +15,6 @@ public class Expense {
     @Column(name = "expense_id")
     private Long id;
 
-//    TODO: financial id needs to be connected to financials table
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "financial_id", nullable = false)
     private Financials financial;
