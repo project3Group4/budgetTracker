@@ -2,6 +2,7 @@ plugins {
 	id 'java'
 	id 'org.springframework.boot' version '4.1.2'
 	id 'io.spring.dependency-management' version '1.1.7'
+	id 'jacoco'
 }
 
 group = 'com.budgettracker'
@@ -54,9 +55,26 @@ tasks.named('test') {
 	useJUnitPlatform{
 			excludeTags 'neon'
 	}
+	finalizedBy jacocoTestReport
 }
 
-// also coming straight from project 2 because I thought this was cool
+jacocoTestCoverageVerification {
+	violationRules {
+		rule {
+			element = "BUNDLE"
+			limit {
+				counter = 'LINE'
+				value = 'COVEREDRATIO'
+				minimum = 0.70
+			}
+		}
+	}
+}
+
+tasks.named('check') {
+	dependsOn jacocoTestCoverageVerification
+}
+
 // change test in run config to dbtest or run ./gradlew dbtest
 tasks.register('dbtest', Test) {
 	testClassesDirs = sourceSets.test.output.classesDirs

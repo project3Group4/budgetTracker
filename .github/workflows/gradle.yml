@@ -24,4 +24,4 @@ jobs:
 
       - name: Run Gradle tests
         working-directory: api
-        run: ./gradlew test
+        run: ./gradlew check
