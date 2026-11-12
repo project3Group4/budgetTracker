@@ -32,4 +32,11 @@ public class Paycheck {
         this.paycheckAmount = paycheckAmount;
         this.savingsPercent = savingsPercent;
     }
+
+    //allows the mainpage to update the paycheck info in the database whenever user enters new paycheck
+    public void updatePaycheck(BigDecimal paycheckAmount,
+                               BigDecimal savingsPercent) {
+        this.paycheckAmount = paycheckAmount;
+        this.savingsPercent = savingsPercent;
+    }
 }

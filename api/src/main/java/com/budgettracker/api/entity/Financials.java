@@ -34,4 +34,9 @@ public class Financials{
         this.category = category;
         this.setAmount = setAmount;
     }
+
+    //same reasoning as the updatepaycheck method
+    public void updateSetAmount(BigDecimal setAmount){
+        this.setAmount = setAmount;
+    }
 }
