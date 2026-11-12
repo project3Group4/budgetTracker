@@ -255,7 +255,31 @@ paths:
           $ref: '#/components/responses/Forbidden'
         '404':
           $ref: '#/components/responses/NotFound'
-        
+
+  /api/v1/user/me/budget:
+    put:
+      tags: [Financials]
+      operationId: saveMyBudget
+      summary: Creates or updates the signed-in user's budget
+      description: Saves the paycheck amount, savings percentage, and financial allocations together in a single transaction.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BudgetRequest'
+      responses:
+        '204':
+          description: Budget successfully saved
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
   /api/v1/user/me/paycheck:
     get:
       tags: [User]
@@ -278,15 +302,22 @@ paths:
           $ref: '#/components/responses/InternalError'
     put:
       tags: [User]
-      operationId: createPaycheck
-      summary: Creates a new paycheck for the signed-in user that belongs to the user. Will replace current paycheck the user has as well as all financial information.
+      operationId: savePaycheck
+      summary: Creates or updates signed-in user's paycheck
+      description: Creates a paycheck if one does not exist. Otherwise, updates the existing paycheck without deleting its associated financial information.
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/UpdatePaycheck'
+              $ref: '#/components/schemas/PaycheckRequest'
       responses:
+        '200':
+          description: Paycheck updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Paycheck'
         '201':
           description: Paycheck created
           content:
@@ -351,6 +382,13 @@ paths:
       parameters:
         - $ref: '#/components/parameters/Page'
         - $ref: '#/components/parameters/Size'
+        - name: activeOnly
+          in: query
+          required: false
+          schema:
+            type: boolean
+            default: false
+          description: When true, returns only active categories
       responses:
         '200':
           description: One page of categories
@@ -790,7 +828,36 @@ components:
           example: 20.5
           minimum: 0
           maximum: 100
-    
+
+    BudgetRequest:
+      type: object
+      required: [paycheck, financials]
+      properties:
+        paycheck:
+          $ref: '#/components/schemas/PaycheckRequest'
+        financials:
+          type: array
+          items:
+            $ref: '#/components/schemas/FinancialsCreate'
+
+    PaycheckRequest:
+      type: object
+      required: [paycheckAmount, savingsPercent]
+      properties:
+        paycheckAmount:
+          type: number
+          format: double
+          example: 420.67
+          minimum: 0
+          maximum: 9999999999.99
+          multipleOf: 0.01
+        savingsPercent:
+          type: number
+          format: double
+          example: 20.5
+          minimum: 0
+          maximum: 100
+
     UpdatePaycheck:
       type: object
       description: Body for PATCH /api/v1/user/me/paycheck. The paycheck amount and savings percentage can both be updated.
@@ -897,11 +964,13 @@ components:
         categoryId:
           type: integer
           format: int64
+          minimum: 1
         setAmount:
           type: number
           format: double
           example: 75.50
           minimum: 0
+          maximum: 9999999999.99
           multipleOf: 0.01
 
 
