@@ -43,17 +43,29 @@ public class PaycheckService {
     @Transactional
     //handles first time paycheck and all subsequent ones
     public Paycheck savePaycheck(Long userId, PaycheckRequest request) {
+        return savePaycheckWithResult(userId, request).paycheck();
+    }
+
+    @Transactional
+    public PaycheckSaveResult savePaycheckWithResult(Long userId, PaycheckRequest request) {
         User user = userRepository.findById(userId).orElseThrow(() -> new ResponseStatusException(
                 HttpStatus.NOT_FOUND, "User not found"));
 
         Paycheck paycheck = paycheckRepository.findByUserId(userId).orElse(null);
 
-        if (paycheck == null) {
+        boolean created = paycheck == null;
+
+        if (created) {
             paycheck = new Paycheck(user, request.paycheckAmount(), request.savingsPercent());
         } else {
             paycheck.updatePaycheck(request.paycheckAmount(), request.savingsPercent());
         }
+        Paycheck savedPaycheck = paycheckRepository.save(paycheck);
 
-        return paycheckRepository.save(paycheck);
+        return new PaycheckSaveResult(savedPaycheck, created);
+    }
+
+    //allows us to return both saved paycheck and whether its a new one
+    public record PaycheckSaveResult(Paycheck paycheck, boolean created){
     }
 }

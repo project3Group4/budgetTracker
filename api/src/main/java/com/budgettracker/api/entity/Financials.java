@@ -1,11 +1,15 @@
 package com.budgettracker.api.entity;
 
 import jakarta.persistence.*;
+import jakarta.persistence.UniqueConstraint;
 import lombok.Getter;
 import java.math.BigDecimal;
 
 @Entity
-@Table(name = "financials")
+@Table(name = "financials", uniqueConstraints = {
+        @UniqueConstraint(columnNames = {"paycheck_id", "category_id"})
+
+})
 @Getter
 public class Financials{
     //primary key

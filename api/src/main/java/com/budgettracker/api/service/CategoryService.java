@@ -20,8 +20,14 @@ public class CategoryService {
     @Transactional(readOnly = true)
     //retrieves categories available to authenticated user, converts each category entity into category
     //response dto, returns list of response objects
-    public Page<CategoryResponse> getCategories(Pageable pageable) {
-        Page<Category> categories = categoryRepository.findByIsActiveTrue(pageable);
+    public Page<CategoryResponse> getCategories(Pageable pageable, boolean activeOnly) {
+        Page<Category> categories;
+
+        if (activeOnly) {
+            categories = categoryRepository.findByIsActiveTrue(pageable);
+        } else {
+            categories = categoryRepository.findAll(pageable);
+        }
 
         return categories.map(category -> {
             Long createdByUserId = null;
@@ -34,7 +40,6 @@ public class CategoryService {
                     createdByUserId);
         });
     }
-
     @Transactional(readOnly = true)
     public Category getAvailableCategory(Long categoryId) {
 
