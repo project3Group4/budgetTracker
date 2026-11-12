@@ -3,13 +3,12 @@ package com.budgettracker.api.service;
 import com.budgettracker.api.dto.CategoryResponse;
 import com.budgettracker.api.entity.Category;
 import com.budgettracker.api.repository.CategoryRepository;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
-
-import java.util.ArrayList;
-import java.util.List;
 
 @Service
 public class CategoryService {
@@ -21,25 +20,19 @@ public class CategoryService {
     @Transactional(readOnly = true)
     //retrieves categories available to authenticated user, converts each category entity into category
     //response dto, returns list of response objects
-    public List<CategoryResponse> getCategories() {
-        List<Category> categories =
-                categoryRepository.findByIsActiveTrue();
+    public Page<CategoryResponse> getCategories(Pageable pageable) {
+        Page<Category> categories = categoryRepository.findByIsActiveTrue(pageable);
 
-        List<CategoryResponse> responses = new ArrayList<>();
-
-        for (Category category : categories) {
-
+        return categories.map(category -> {
             Long createdByUserId = null;
 
             if (category.getCreatedByUser() != null) {
                 createdByUserId = category.getCreatedByUser().getId();
             }
 
-            responses.add(new CategoryResponse(category.getId(), category.getName(), category.isActive(),
-                    createdByUserId));
-        }
-
-        return responses;
+            return new CategoryResponse(category.getId(), category.getName(), category.isActive(),
+                    createdByUserId);
+        });
     }
 
     @Transactional(readOnly = true)
