@@ -46,6 +46,15 @@ public class PaycheckService {
         return savePaycheckWithResult(userId, request).paycheck();
     }
 
+    public void deletePaycheck(Long userId) {
+        User user = userRepository.findById(userId).orElseThrow(() -> new ResponseStatusException(
+                HttpStatus.NOT_FOUND, "User not found"));
+        Paycheck paycheck = paycheckRepository.findByUserId(user.getId())
+                .orElseThrow(() ->
+                        new ResponseStatusException(HttpStatus.NOT_FOUND, "Paycheck not found"));
+        paycheckRepository.delete(paycheck);
+    }
+
     @Transactional
     public PaycheckSaveResult savePaycheckWithResult(Long userId, PaycheckRequest request) {
         User user = userRepository.findById(userId).orElseThrow(() -> new ResponseStatusException(

@@ -9,5 +9,7 @@ import java.util.Optional;
 public interface FinancialsRepository extends JpaRepository<Financials, Long> {
     List<Financials> findByPaycheckId(Long paycheckId);
 
+    Optional<Financials> findByIdAndPaycheckId(Long id, Long paycheckId);
+
     Optional<Financials> findByPaycheckIdAndCategoryId(Long paycheckId, Long categoryId);
 }

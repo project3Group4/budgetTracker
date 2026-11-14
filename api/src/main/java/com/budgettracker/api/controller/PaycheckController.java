@@ -39,4 +39,15 @@ public class PaycheckController {
         }
         return ResponseEntity.ok(response);
     }
+
+    //TODO: TESTS FOR ALL BELOW METHODS
+
+    @DeleteMapping
+    public ResponseEntity<Void> deletePaycheck(@AuthenticationPrincipal Jwt jwt) {
+        Long userId = Long.valueOf(jwt.getSubject());
+
+        paycheckService.deletePaycheck(userId);
+
+        return ResponseEntity.noContent().build();
+    }
 }
