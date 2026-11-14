@@ -10,16 +10,28 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.server.ResponseStatusException;
 
+/**
+ * Controller for user API routes
+ */
 @RestController
 @RequestMapping("/api/v1/user")
 public class UserController {
 
     private final UserRepository userRepository;
 
+    /**
+     * Default constructor
+     * @param userRepository user repository class
+     */
     public UserController(UserRepository userRepository) {
         this.userRepository = userRepository;
     }
 
+    /**
+     *
+     * @param jwt authentication principal
+     * @return new user response
+     */
     @GetMapping("/me")
     public UserResponse getMe(
             @AuthenticationPrincipal Jwt jwt
