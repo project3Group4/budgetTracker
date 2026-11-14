@@ -3,6 +3,9 @@ package com.budgettracker.api.entity;
 import jakarta.persistence.*;
 import lombok.Getter;
 
+/**
+ * Category database table
+ */
 @Entity
 @Table(name = "category")
 @Getter
@@ -25,9 +28,17 @@ public class Category{
     @Column(name = "is_active", nullable = false)
     private boolean isActive = true;
 
+    /**
+     * Default constructor for Category table
+     */
     protected Category(){
     }
 
+    /**
+     * Parameterized constructor for Category table
+     * @param createdByUser User object
+     * @param name String name
+     */
     public Category(User createdByUser, String name){
         this.createdByUser = createdByUser;
         this.name = name;

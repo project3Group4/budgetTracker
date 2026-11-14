@@ -19,6 +19,9 @@ import org.springframework.web.server.ResponseStatusException;
 import java.util.ArrayList;
 import java.util.List;
 
+/**
+ * Service for financials controller
+ */
 @Service
 public class FinancialsService{
     private final FinancialsRepository financialsRepository;
@@ -26,6 +29,13 @@ public class FinancialsService{
     private final PaycheckService paycheckService;
     private final CategoryService categoryService;
 
+    /**
+     * Constructor for class
+     * @param financialsRepository financials repository class
+     * @param expenseRepository expense repository class
+     * @param paycheckService paycheck service class
+     * @param categoryService category service class
+     */
     public FinancialsService(FinancialsRepository financialsRepository, ExpenseRepository expenseRepository, PaycheckService paycheckService,
                              CategoryService categoryService){
         this.financialsRepository = financialsRepository;
@@ -34,8 +44,12 @@ public class FinancialsService{
         this.categoryService = categoryService;
     }
 
+    /**
+     * retrieves all financial allocations saved w/ authenticated user's paycheck
+     * @param userId Long
+     * @return List of financial responses
+     */
     @Transactional(readOnly = true)
-    //retrieves all financial allocations saved w/ authenticated user's paycheck
     public List<FinancialsResponse> getFinancials(Long userId) {
         Paycheck paycheck = paycheckService.findPaycheck(userId);
 
@@ -53,8 +67,8 @@ public class FinancialsService{
 
     /**
      * Finds a specific financial allocation saved with the authenticated user's paycheck and financial ID
-     * @param financialId the ID of the financial item we're looking for
-     * @param userId the authenticated user's ID
+     * @param financialId Long the ID of the financial item we're looking for
+     * @param userId Long the authenticated user's ID
      * @return response with financial information
      */
     @Transactional(readOnly = true)
@@ -62,6 +76,11 @@ public class FinancialsService{
         return FinancialsResponse.from(findOwned(financialId, userId));
     }
 
+    /**
+     * Deletes a specific financial allocation
+     * @param financialId Long
+     * @param userId Long
+     */
     public void deleteFinancial(Long financialId, Long userId) {
         Financials financial = findOwned(financialId, userId);
 
@@ -70,8 +89,8 @@ public class FinancialsService{
 
     /**
      * Finds a specific financial allocation saved with the authenticated user's paycheck and financial ID and then returns the expenses
-     * @param financialId the ID of the financial item we're looking for
-     * @param userId the authenticated user's ID
+     * @param financialId Long the ID of the financial item we're looking for
+     * @param userId Long the authenticated user's ID
      * @return response with list of expense information
      */
     @Transactional(readOnly = true)
@@ -90,6 +109,13 @@ public class FinancialsService{
         return responses;
     }
 
+    /**
+     * Finds a specific financial allocation saved with the authenticated user's paycheck and financial ID and then returns a single expense from ID
+     * @param financialId Long the ID of the financial item we're looking for
+     * @param expenseId Long the ID of the expense item we're looking for
+     * @param userId Long the authenticated user's ID
+     * @return
+     */
     @Transactional(readOnly = true)
     public ExpenseResponse findExpenseByID(Long financialId, Long expenseId, Long userId) {
         Financials financial = findOwned(financialId, userId);
@@ -100,6 +126,12 @@ public class FinancialsService{
         return ExpenseResponse.from(expense);
     }
 
+    /**
+     * Deletes a specific expense
+     * @param financialId Long
+     * @param expenseId Long
+     * @param userId Long
+     */
     public void deleteExpense(Long financialId, Long expenseId, Long userId){
         Financials financial = findOwned(financialId, userId);
         Expense expense = expenseRepository
@@ -110,8 +142,13 @@ public class FinancialsService{
         expenseRepository.delete(expense);
     }
 
+    /**
+     * saves or updates an individual category's budget allocation
+     * @param paycheck Paycheck object
+     * @param request Financials request object
+     * @return saved financial entity object
+     */
     @Transactional
-    //saves or updates an individual category's budget allocation
     public Financials saveFinancial(Paycheck paycheck, FinancialsRequest request){
         Category category = categoryService.getAvailableCategory(request.categoryId());
 
@@ -127,7 +164,12 @@ public class FinancialsService{
         return financialsRepository.save(financial);
     }
 
-
+    /**
+     * Checks if the user owns the financial record we're looking for
+     * @param financialId Long
+     * @param userId Long
+     * @return financials repository object or a NOT FOUND
+     */
     private Financials findOwned(Long financialId, Long userId){
         Paycheck paycheck = paycheckService.findPaycheck(userId);
 

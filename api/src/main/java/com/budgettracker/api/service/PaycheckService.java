@@ -11,18 +11,30 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
+/**
+ * Service class for paycheck controller
+ */
 @Service
 public class PaycheckService {
     private final PaycheckRepository paycheckRepository;
     private final UserRepository userRepository;
 
+    /**
+     * Constructor for class
+     * @param paycheckRepository Paycheck repository class
+     * @param userRepository User repository class
+     */
     public PaycheckService(PaycheckRepository paycheckRepository, UserRepository userRepository) {
         this.paycheckRepository = paycheckRepository;
         this.userRepository = userRepository;
     }
 
+    /**
+     * gets user's existing paycheck and converts to paycheck response dto
+     * @param userId Long
+     * @return paycheck response dto
+     */
     @Transactional(readOnly = true)
-    //gets user's existing paycheck and converts to paycheck response dto
     public PaycheckResponse getPaycheck(Long userId) {
         Paycheck paycheck = findPaycheck(userId);
 
@@ -33,19 +45,32 @@ public class PaycheckService {
         );
     }
 
+    /**
+     * retrieves actual paycheck entity from db
+     * @param userId Long
+     * @return paycheck entity
+     */
     @Transactional(readOnly = true)
-    //retrieves actual paycheck entity from db
     public Paycheck findPaycheck(Long userId) {
         return paycheckRepository.findByUserId(userId) .orElseThrow(() -> new ResponseStatusException(
                 HttpStatus.NOT_FOUND, "Paycheck not found"));
     }
 
+    /**
+     * handles first time paycheck and all subsequent ones
+     * @param userId Long
+     * @param request paycheck request
+     * @return saved paycheck entity
+     */
     @Transactional
-    //handles first time paycheck and all subsequent ones
     public Paycheck savePaycheck(Long userId, PaycheckRequest request) {
         return savePaycheckWithResult(userId, request).paycheck();
     }
 
+    /**
+     * Deletes paycheck belonging to user
+     * @param userId Long
+     */
     public void deletePaycheck(Long userId) {
         User user = userRepository.findById(userId).orElseThrow(() -> new ResponseStatusException(
                 HttpStatus.NOT_FOUND, "User not found"));
@@ -55,6 +80,12 @@ public class PaycheckService {
         paycheckRepository.delete(paycheck);
     }
 
+    /**
+     * Saves paycheck result
+     * @param userId Long
+     * @param request Paycheck request
+     * @return returns saved or new paycheck
+     */
     @Transactional
     public PaycheckSaveResult savePaycheckWithResult(Long userId, PaycheckRequest request) {
         User user = userRepository.findById(userId).orElseThrow(() -> new ResponseStatusException(

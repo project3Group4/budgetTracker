@@ -5,6 +5,9 @@ import jakarta.persistence.*;
 import lombok.Getter;
 import java.math.BigDecimal;
 
+/**
+ * Expense database table
+ */
 @Entity
 @Table(name = "expenses")
 @Getter
@@ -26,9 +29,18 @@ public class Expense {
     @Column(name = "description")
     private String description;
 
+    /**
+     * Default constructor for Expense table
+     */
     protected Expense() {
     }
 
+    /**
+     * Parameterized constructor for Expense table
+     * @param financial Financials object
+     * @param amount BigDecimal
+     * @param description String
+     */
     public Expense(Financials financial,
                    BigDecimal amount,
                    String description) {

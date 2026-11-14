@@ -6,6 +6,11 @@ import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.Digits;
 import jakarta.validation.constraints.Positive;
 
+/**
+ * Request class for financials entity
+ * @param categoryId Long category id
+ * @param setAmount BigDecimal amount set for financial (min 0)
+ */
 public record FinancialsRequest(
         @NotNull
         @Positive
