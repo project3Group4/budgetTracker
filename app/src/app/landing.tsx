@@ -69,33 +69,100 @@ export default function LandingScreen() {
         }));
     }
 
-    async function handleSeeFinancials() {
-        setError('');
-        //this excludes savings from the allocations
+    function validateInputs(): boolean {
+        const paycheck = Number(paycheckAmount);
+        const savings = Number(savingsPercent);
+
+        const savingsAmount = Math.round(paycheck * savings) / 100;
+        const availableAmount = paycheck - savingsAmount;
+
+        if (paycheckAmount.trim() === '') {
+            setError('Please enter your paycheck amount.');
+            return false;
+        }
+
+        //only allows numbers and optional decimal point with up to 2 decimal points
+        if (!/^\d+(\.\d{1,2})?$/.test(paycheckAmount.trim())) {
+            setError('Please enter a valid paycheck amount.');
+            return false;
+        }
+
+        if (Number(paycheckAmount) > 9999999999.99) {
+            setError('Paycheck amount is too large.');
+            return false;
+        }
+
+        if (savingsPercent.trim() === '') {
+            setError('Please enter your savings percentage.');
+            return false;
+        }
+
+        if (
+            !/^\d+(\.\d+)?$/.test(savingsPercent.trim()) ||
+            Number(savingsPercent) > 100
+        ) {
+            setError('Savings percentage must be between 0 and 100.');
+            return false;
+        }
+
         const budgetCategories = categories.filter(
             category => category.name.toLowerCase() !== 'savings'
         );
 
-        if (paycheckAmount.trim() === '' || savingsPercent.trim() === '') {
-            setError('Please enter your paycheck amount and savings percentage.');
-            return;
+        for (const category of budgetCategories) {
+            const amount = allocations[category.id]?.trim() ?? '';
+
+            if (amount === '') {
+                setError(`Please enter an amount for ${category.name}.`);
+                return false;
+            }
+
+            if (
+                !/^\d+(\.\d{1,2})?$/.test(amount) ||
+                Number(amount) > 9999999999.99
+            ) {
+                setError(`Please enter a valid amount for ${category.name}.`);
+                return false;
+            }
         }
 
-        if (budgetCategories.some(
-            category => !allocations[category.id]?.trim()
-        )) {
-            setError('Please enter an amount for each category.');
+        const totalAllocations = budgetCategories.reduce(
+            (total, category) =>
+                total + Math.round(Number(allocations[category.id]) * 100),
+            0
+        ) / 100;
+
+        if (Math.round(totalAllocations * 100) > Math.round(availableAmount * 100)) {
+            setError(
+                `Your total budget allocations cannot exceed ` +
+                `$${availableAmount.toFixed(2)} after savings.`
+            );
+            return false;
+        }
+        return true;
+    }
+
+    async function handleSeeFinancials() {
+        setError('');
+
+        if (saving || checkingPaycheck || loading || categories.length === 0){
+            return;
+        }
+        if (!validateInputs()) {
             return;
         }
         setSaving(true);
 
-        try {
+        try{
             const token = localStorage.getItem('app_jwt');
-
             if (!token) {
                 setError('You must be signed in.');
                 return;
             }
+            //this excludes savings from the allocations
+            const budgetCategories = categories.filter(
+                category => category.name.toLowerCase() !== 'savings'
+            );
 
             const requestBody = {
                 paycheck: {
@@ -120,29 +187,48 @@ export default function LandingScreen() {
                 }
             );
 
-            if (!response.ok) {
-                throw new Error('Failed to save budget.');
+            if (response.status === 401) {
+                setError('Your session has expired. Please sign in again.');
+                return;
+            }
+            if (response.status === 400) {
+                setError('Invalid budget information. Please check your inputs.');
+                return;
             }
 
+            if (response.status === 404) {
+                setError('A required record could not be found.');
+                return;
+            }
+            if (!response.ok) {
+                setError('Unable to save budget. Please try again.');
+                return;
+            }
             console.log('Budget saved successfully.');
-
-        } catch (err) {
-            setError('Unable to save budget.');
-        } finally {
+        }catch(err){
+            setError('Unable to connect to server. Please try again.');
+        } finally{
             setSaving(false);
         }
     }
 
     async function handleUseLastPaycheck() {
         setError('');
+
+        if (saving || checkingPaycheck) {
+            return;
+        }
+
         setCheckingPaycheck(true);
 
         try {
             const token = localStorage.getItem('app_jwt');
+
             if (!token) {
                 setError('You must be signed in.');
                 return;
             }
+
             const response = await fetch(
                 `${API_URL}/api/v1/user/me/paycheck`,
                 {
@@ -153,11 +239,15 @@ export default function LandingScreen() {
                 }
             );
 
+            if (response.status === 401) {
+                setError('Your session has expired. Please sign in again.');
+                return;
+            }
+
             if (response.status === 404) {
-                const message =
-                    "You don't have a saved paycheck yet. " +
-                    "Please enter your paycheck information and " +
-                    "click See Financials to continue.";
+                const message = "You don't have a saved paycheck yet. " +
+                                "Please enter your paycheck information and " +
+                                "click See Financials to continue.";
 
                 if (Platform.OS === 'web') {
                     window.alert(message);
@@ -168,13 +258,13 @@ export default function LandingScreen() {
             }
 
             if (!response.ok) {
-                throw new Error('Failed to retrieve paycheck.');
+                setError('Unable to retrieve previous paycheck.');
+                return;
             }
-
             console.log('Previous paycheck found.');
 
         } catch (err) {
-            setError('Unable to retrieve previous paycheck.');
+            setError('Unable to connect to server. Please try again.');
         } finally {
             setCheckingPaycheck(false);
         }
@@ -206,7 +296,6 @@ export default function LandingScreen() {
             <Text style={styles.sectionTitle}>Monthly Budget Allocation</Text>
 
             {loading && <Text>Loading categories...</Text>}
-            {error !== '' && <Text style={styles.error}>{error}</Text>}
             {categories
                 .filter(category => category.name.toLowerCase() !== 'savings')
                 .map(category => (
@@ -222,6 +311,8 @@ export default function LandingScreen() {
                     </View>
                 ))
             }
+
+        {error !== '' && <Text style={styles.error}>{error}</Text>}
         <Button
             title={saving ? 'Saving...' : 'See Financials'}
             onPress={handleSeeFinancials}
