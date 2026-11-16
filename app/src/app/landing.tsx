@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { View, Text, TextInput, StyleSheet, ScrollView, Pressable, Alert, Platform } from 'react-native';
+import { View, Text, TextInput, StyleSheet, ScrollView, Pressable, Alert, Platform, useWindowDimensions} from 'react-native';
 
 const API_URL = process.env.EXPO_PUBLIC_API_URL ?? 'http://localhost:8080';
 
@@ -12,6 +12,9 @@ type Category = {
 
 export default function LandingScreen() {
 //  useState stores values entered by user
+    //allows layout to adjust automatically based on screen width
+    const {width} = useWindowDimensions();
+    const isSmallScreen = width < 600;
     //stores each category's ID with amount entered
     const [paycheckAmount, setPaycheckAmount] = useState('');
     const [savingsPercent, setSavingsPercent] = useState('');
@@ -277,10 +280,10 @@ export default function LandingScreen() {
     return (
         <ScrollView
             style={styles.screen}
-            contentContainerStyle={styles.container}
+            contentContainerStyle={[styles.container, isSmallScreen && styles.mobileContainer]}
             keyboardShouldPersistTaps="handled"
         >
-            <View style={styles.card}>
+            <View style={[styles.card, isSmallScreen && styles.mobileCard]}>
             <View style={styles.header}>
                 <Text style={styles.title}>Budget Tracker</Text>
                 <Text style={styles.subtitle}>Let's plan your budget.</Text>
@@ -484,5 +487,13 @@ const styles = StyleSheet.create({
     },
     disabledButton: {
         opacity: 0.5,
+    },
+    mobileContainer: {
+        padding: 10,
+        justifyContent: 'flex-start',
+    },
+    mobileCard: {
+        padding: 15,
+        borderRadius: 15,
     },
 });
