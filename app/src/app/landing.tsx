@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { View, Text, TextInput, StyleSheet, ScrollView, Button, Alert, Platform } from 'react-native';
+import { View, Text, TextInput, StyleSheet, ScrollView, Pressable, Alert, Platform } from 'react-native';
 
 const API_URL = process.env.EXPO_PUBLIC_API_URL ?? 'http://localhost:8080';
 
@@ -19,10 +19,10 @@ export default function LandingScreen() {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
     const [allocations, setAllocations] = useState<Record<number, string>>({});
-    const [savings, setSaving] = useState(false);
+    const [saving, setSaving] = useState(false);
     const [checkingPaycheck, setCheckingPaycheck] = useState(false);
 
-
+    //retrieves active categories from backend
     async function fetchCategories() {
         try {
             //retrieves users authentication token
@@ -205,11 +205,14 @@ export default function LandingScreen() {
                 return;
             }
             console.log('Budget saved successfully.');
+            //TODO: Navigate to homepage after successful save
+
         }catch(err){
             setError('Unable to connect to server. Please try again.');
         } finally{
             setSaving(false);
         }
+
     }
 
     async function handleUseLastPaycheck() {
@@ -262,6 +265,7 @@ export default function LandingScreen() {
                 return;
             }
             console.log('Previous paycheck found.');
+            //TODO: Navigate to homepage once implemented
 
         } catch (err) {
             setError('Unable to connect to server. Please try again.');
@@ -271,93 +275,214 @@ export default function LandingScreen() {
     }
 
     return (
-        <ScrollView contentContainerStyle={styles.container}>
-            <Text style={styles.title}>Budget Tracker</Text>
-            <Text>Enter your paycheck information</Text>
+        <ScrollView
+            style={styles.screen}
+            contentContainerStyle={styles.container}
+            keyboardShouldPersistTaps="handled"
+        >
+            <View style={styles.card}>
+            <View style={styles.header}>
+                <Text style={styles.title}>Budget Tracker</Text>
+                <Text style={styles.subtitle}>Let's plan your budget.</Text>
+                <Text style={styles.description}>
+                    Enter your paycheck information and allocate your monthly expenses.
+                </Text>
+            </View>
 
-            <Text style={styles.label}>Paycheck Amount ($)</Text>
-            <TextInput
-                style={styles.input}
-                placeholder="Enter paycheck amount"
-                keyboardType="decimal-pad"
-                value={paycheckAmount}
-                onChangeText={setPaycheckAmount}
-            />
+            <View style={styles.section}>
+                <Text style={styles.sectionTitle}>Paycheck Information</Text>
+                <Text style={styles.label}>Paycheck Amount ($)</Text>
 
-            <Text style={styles.label}>Savings Percentage (%)</Text>
-            <TextInput
-                style={styles.input}
-                placeholder="Enter savings percentage"
-                keyboardType="decimal-pad"
-                value={savingsPercent}
-                onChangeText={setSavingsPercent}
-            />
+                <TextInput
+                    style={styles.input}
+                    placeholder="Enter paycheck amount"
+                    placeholderTextColor="#64748B"
+                    keyboardType="decimal-pad"
+                    value={paycheckAmount}
+                    onChangeText={setPaycheckAmount}
+                />
 
-            <Text style={styles.sectionTitle}>Monthly Budget Allocation</Text>
+                <Text style={styles.label}>Savings Percentage (%)</Text>
 
-            {loading && <Text>Loading categories...</Text>}
-            {categories
-                .filter(category => category.name.toLowerCase() !== 'savings')
-                .map(category => (
-                    <View key={category.id}>
-                        <Text style={styles.label}>{category.name} ($)</Text>
-                        <TextInput
-                            style={styles.input}
-                            placeholder={`Enter ${category.name.toLowerCase()} amount`}
-                            keyboardType="decimal-pad"
-                            value={allocations[category.id] ?? ''}
-                            onChangeText={amount => updateAllocation(category.id, amount)}
-                        />
-                    </View>
-                ))
-            }
+                <TextInput
+                    style={styles.input}
+                    placeholder="Enter savings percentage"
+                    placeholderTextColor="#64748B"
+                    keyboardType="decimal-pad"
+                    value={savingsPercent}
+                    onChangeText={setSavingsPercent}
+                />
+            </View>
 
-        {error !== '' && <Text style={styles.error}>{error}</Text>}
-        <Button
-            title={saving ? 'Saving...' : 'See Financials'}
-            onPress={handleSeeFinancials}
-            disabled={loading || saving || categories.length === 0}
-        />
-        <Button
-            title={checkingPaycheck ? 'Checking...': 'Use Last Paycheck'}
-            onPress={handleUseLastPaycheck}
-            disabled={saving || checkingPaycheck}
-        />
+            <View style={styles.section}>
+                <Text style={styles.sectionTitle}>
+                    Monthly Budget Allocation
+                </Text>
+
+                <Text style={styles.sectionDescription}>
+                    Allocate your available funds to each spending category.
+                </Text>
+
+                {loading && <Text>Loading categories...</Text>}
+                {categories
+                    .filter(category => category.name.toLowerCase() !== 'savings')
+                    .map(category => (
+                        <View key={category.id}>
+                            <Text style={styles.label}>{category.name} ($)</Text>
+                            <TextInput
+                                style={styles.input}
+                                placeholder={`Enter ${category.name.toLowerCase()} amount`}
+                                placeholderTextColor="#64748B"
+                                keyboardType="decimal-pad"
+                                value={allocations[category.id] ?? ''}
+                                onChangeText={amount => updateAllocation(category.id, amount)}
+                            />
+                        </View>
+                    ))
+                }
+            </View>
+
+            {error !== '' && <Text style={styles.error}>{error}</Text>}
+            <View style={styles.buttonContainer}>
+                <Pressable
+                    style={[styles.primaryButton, (loading || saving || checkingPaycheck || categories.length === 0)
+                        && styles.disabledButton]}
+                    onPress={handleSeeFinancials}
+                    disabled={loading || saving || checkingPaycheck || categories.length ==== 0}
+                    accessibilityRole="button"
+                >
+                    <Text style={styles.primaryButtonText}>
+                        {saving ? 'Saving...': 'See Financials'}
+                    </Text>
+                </Pressable>
+
+                <Pressable
+                    style={[styles.secondaryButton, (saving || checkingPaycheck) && styles.disabledButton]}
+                    onPress={handleUseLastPaycheck}
+                    disabled={saving || checkingPaycheck}
+                    accessibilityRole="button"
+                >
+                    <Text style={styles.secondaryButtonText}>
+                        {checkingPaycheck ? 'Checking...': 'Use Last Paycheck'}
+                    </Text>
+                </Pressable>
+            </View>
         </ScrollView>
     );
 }
 
 const styles = StyleSheet.create({
+    screen:{
+        flex: 1,
+        backgroundColor: '#F1F5F9',
+    },
     container: {
         flexGrow: 1,
         padding: 20,
         justifyContent: 'center',
+        alignItems: 'center',
+    },
+    card: {
+        width: '100%',
+        maxWidth: 550,
+        backgroundColor: '#FFFFFF',
+        borderRadius: 20,
+        padding: 25,
+        borderWidth: 1,
+        borderColor: '#E2E8F0'
+    },
+    header: {
+        marginBottom: 25,
     },
     title: {
         fontSize: 30,
         fontWeight: 'bold',
-        marginBottom: 20,
+        color: '#172E29',
+        marginBottom: 10,
+    },
+    subtitle: {
+        fontSize: 20,
+        fontWeight: '600',
+        color: '#256B53',
+        marginBottom: 10,
+    },
+    description: {
+        fontSize: 15,
+        color: '#64748B',
+        lineHeight: 20,
     },
     label: {
         fontSize: 15,
-        marginTop: 20,
-        marginBottom: 5,
+        fontWeight: '500',
+        color: '#334155',
+        marginTop: 15,
+        marginBottom: 10,
     },
     input: {
+        backgroundColor: '#F8FAFC',
         borderWidth: 1,
-        borderColor: 'gray',
+        borderColor: '#CBD5E1',
         borderRadius: 10,
-        padding: 10,
+        paddingHorizontal: 15,
+        paddingVertical: 10,
         fontSize: 15,
+        color: '#172E29',
+        minHeight: 48,
+    },
+    section: {
+        borderTopWidth 1,
+        borderTopColor: '#E2E8F0',
+        paddingTop: 20,
+        marginBottom: 25,
     },
     sectionTitle: {
         fontSize: 20,
-        fontWeight: 'bold',
-        marginTop: 30,
+        fontWeight: '600',
+        color: '#172E29',
+        marginBottom: 10,
+    },
+    sectionDescription: {
+        fontSize: 15,
+        color: '#64748B',
+        lineHeight: 20,
         marginBottom: 10,
     },
     error: {
         color: 'red',
         marginTop: 10,
+    },
+    buttonContainer: {
+        gap: 10,
+        marginTop: 15,
+    },
+    primaryButton: {
+        backgroundColor: '#256B53',
+        borderRadius: 10,
+        paddingVertical: 15,
+        alignItems: 'center',
+        justifyContent: 'center',
+        minHeight: 50,
+    },
+    primaryButtonText: {
+        color: '#FFFFFF',
+        fontSize: '600',
+    },
+    secondaryButton: {
+        backgroundColor: '#FFFFFF',
+        borderWidth: 1,
+        borderColor: '#256B53',
+        borderRadius: 10,
+        paddingVertical: 15,
+        alignItems: 'center',
+        justifyContent: 'center',
+        minHeight: 50,
+    },
+    secondaryButtonText: {
+        color: '#256B53',
+        fontSize: 15,
+        fontWeight: '600',
+    },
+    disabledButton: {
+        opacity: 0.5,
     },
 });

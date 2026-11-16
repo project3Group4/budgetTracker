@@ -117,7 +117,7 @@ export default function AuthRedirectScreen() {
         await saveUser(data.user);
         await removeCodeVerifier();
 
-        router.replace("/");
+        router.replace("/landing");
       } catch (error) {
         const errorMessage =
           error instanceof Error
