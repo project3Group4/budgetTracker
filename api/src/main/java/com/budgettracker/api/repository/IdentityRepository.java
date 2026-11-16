@@ -6,6 +6,9 @@ import org.springframework.data.jpa.repository.JpaRepository;
 
 import java.util.Optional;
 
+/**
+ * Repository for Identities
+ */
 public interface IdentityRepository extends JpaRepository<Identity, Long> {
 
     Optional<Identity> findByProviderAndProviderUserId(

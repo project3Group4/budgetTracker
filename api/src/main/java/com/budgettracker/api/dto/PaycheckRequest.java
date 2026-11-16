@@ -6,6 +6,11 @@ import jakarta.validation.constraints.DecimalMax;
 import jakarta.validation.constraints.Digits;
 import jakarta.validation.constraints.NotNull;
 
+/**
+ * Request entity for paycheck entity
+ * @param paycheckAmount BigDecimal paycheck amount (min 0)
+ * @param savingsPercent BigDecimal savings percentage (between 0 and 100)
+ */
 public record PaycheckRequest(
         @NotNull
         @DecimalMin("0.00")

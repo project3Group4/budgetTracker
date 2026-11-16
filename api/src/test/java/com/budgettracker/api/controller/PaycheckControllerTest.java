@@ -9,17 +9,22 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
 import org.springframework.context.annotation.Import;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.security.oauth2.jwt.JwtDecoder;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.math.BigDecimal;
 
 import static org.mockito.Mockito.*;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.jwt;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 
 @WebMvcTest(PaycheckController.class)
 @Import(SecurityConfig.class)
@@ -108,5 +113,33 @@ class PaycheckControllerTest {
                 .andExpect(jsonPath("$.id").value(1))
                 .andExpect(jsonPath("$.paycheckAmount").value(3000.00))
                 .andExpect(jsonPath("$.savingsPercent").value(20.00));
+    }
+
+    @Test
+    void deleteExistingPaycheckWithCorrectUser() throws Exception {
+        mockMvc.perform(delete("/api/v1/user/me/paycheck")
+                        .with(jwt().jwt(j -> j.subject("5")))
+                        .with(csrf()))
+                .andExpect(status().isNoContent());
+
+        verify(paycheckService).deletePaycheck(5L);
+    }
+
+    @Test
+    void deletingNotExistingPaycheckWhenNoneExists() throws Exception{
+        doThrow(new ResponseStatusException(HttpStatus.NOT_FOUND, "Paycheck not found"))
+                .when(paycheckService).deletePaycheck(5L);
+
+        mockMvc.perform(delete("/api/v1/user/me/paycheck")
+                        .with(jwt().jwt(j -> j.subject("5")))
+                        .with(csrf()))
+                .andExpect(status().isNotFound());
+    }
+
+    @Test
+    void deletingExistingPaycheckWithoutCorrectUserIsUnauthorized() throws Exception{
+        mockMvc.perform(delete("/api/v1/user/me/paycheck").with(csrf()))
+                .andExpect(status().isUnauthorized());
+        verifyNoInteractions(paycheckService);
     }
 }

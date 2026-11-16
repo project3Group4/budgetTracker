@@ -4,6 +4,9 @@ import jakarta.persistence.*;
 
 import java.time.Instant;
 
+/**
+ * Identities database table
+ */
 @Entity
 @Table(
         name = "identities",
@@ -33,9 +36,18 @@ public class Identity {
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt;
 
+    /**
+     * Default constructor for Identity table
+     */
     protected Identity() {
     }
 
+    /**
+     * Parameterized constructor for Identity table
+     * @param user User object
+     * @param provider IdentityProvider (GITHUB or GOOGLE)
+     * @param providerUserId String
+     */
     public Identity(User user, IdentityProvider provider, String providerUserId) {
         this.user = user;
         this.provider = provider;
