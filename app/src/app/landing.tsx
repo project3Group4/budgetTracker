@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { View, Text, TextInput, StyleSheet, ScrollView, Button } from 'react-native';
+import { View, Text, TextInput, StyleSheet, ScrollView, Button, Alert, Platform } from 'react-native';
 
 const API_URL = process.env.EXPO_PUBLIC_API_URL ?? 'http://localhost:8080';
 
@@ -20,6 +20,7 @@ export default function LandingScreen() {
     const [error, setError] = useState('');
     const [allocations, setAllocations] = useState<Record<number, string>>({});
     const [savings, setSaving] = useState(false);
+    const [checkingPaycheck, setCheckingPaycheck] = useState(false);
 
 
     async function fetchCategories() {
@@ -132,6 +133,53 @@ export default function LandingScreen() {
         }
     }
 
+    async function handleUseLastPaycheck() {
+        setError('');
+        setCheckingPaycheck(true);
+
+        try {
+            const token = localStorage.getItem('app_jwt');
+            if (!token) {
+                setError('You must be signed in.');
+                return;
+            }
+            const response = await fetch(
+                `${API_URL}/api/v1/user/me/paycheck`,
+                {
+                    method: 'GET',
+                    headers: {
+                        Authorization: `Bearer ${token}`
+                    }
+                }
+            );
+
+            if (response.status === 404) {
+                const message =
+                    "You don't have a saved paycheck yet. " +
+                    "Please enter your paycheck information and " +
+                    "click See Financials to continue.";
+
+                if (Platform.OS === 'web') {
+                    window.alert(message);
+                } else {
+                    Alert.alert('No Previous Paycheck', message);
+                }
+                return;
+            }
+
+            if (!response.ok) {
+                throw new Error('Failed to retrieve paycheck.');
+            }
+
+            console.log('Previous paycheck found.');
+
+        } catch (err) {
+            setError('Unable to retrieve previous paycheck.');
+        } finally {
+            setCheckingPaycheck(false);
+        }
+    }
+
     return (
         <ScrollView contentContainerStyle={styles.container}>
             <Text style={styles.title}>Budget Tracker</Text>
@@ -178,6 +226,11 @@ export default function LandingScreen() {
             title={saving ? 'Saving...' : 'See Financials'}
             onPress={handleSeeFinancials}
             disabled={loading || saving || categories.length === 0}
+        />
+        <Button
+            title={checkingPaycheck ? 'Checking...': 'Use Last Paycheck'}
+            onPress={handleUseLastPaycheck}
+            disabled={saving || checkingPaycheck}
         />
         </ScrollView>
     );
