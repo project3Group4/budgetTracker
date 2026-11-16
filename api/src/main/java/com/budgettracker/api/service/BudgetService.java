@@ -11,16 +11,29 @@ import org.springframework.web.server.ResponseStatusException;
 import java.util.HashSet;
 import java.util.Set;
 
+/**
+ * Service for budget controller
+ */
 @Service
 public class BudgetService {
     private final PaycheckService paycheckService;
     private final FinancialsService financialsService;
 
+    /**
+     * Constructor for class
+     * @param paycheckService paycheck service class
+     * @param financialsService financial service class
+     */
     public BudgetService(PaycheckService paycheckService, FinancialsService financialsService) {
         this.paycheckService = paycheckService;
         this.financialsService = financialsService;
     }
 
+    /**
+     * Saves the new budget
+     * @param userId Long
+     * @param request BudgetRequest object
+     */
     @Transactional
     public void saveBudget(Long userId, BudgetRequest request) {
         //hashset only allows unique values meaning there wont be duplicate categories allowed
