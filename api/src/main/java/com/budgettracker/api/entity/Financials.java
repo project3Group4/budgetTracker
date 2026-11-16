@@ -4,6 +4,8 @@ import jakarta.persistence.*;
 import jakarta.persistence.UniqueConstraint;
 import lombok.Getter;
 import java.math.BigDecimal;
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * Financials database table
@@ -32,6 +34,10 @@ public class Financials{
     //amount set by user for that category
     @Column(name = "set_amount", nullable = false)
     private BigDecimal setAmount;
+
+    // This is needed if we wanna do cascade delete
+    @OneToMany(mappedBy = "financial", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<Expense> expenses = new ArrayList<>();
 
     /**
      * Default constructor for Financials table

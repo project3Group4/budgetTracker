@@ -71,6 +71,7 @@ public class PaycheckService {
      * Deletes paycheck belonging to user
      * @param userId Long
      */
+    @Transactional
     public void deletePaycheck(Long userId) {
         User user = userRepository.findById(userId).orElseThrow(() -> new ResponseStatusException(
                 HttpStatus.NOT_FOUND, "User not found"));

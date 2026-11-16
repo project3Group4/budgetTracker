@@ -81,6 +81,7 @@ public class FinancialsService{
      * @param financialId Long
      * @param userId Long
      */
+    @Transactional
     public void deleteFinancial(Long financialId, Long userId) {
         Financials financial = findOwned(financialId, userId);
 
@@ -132,6 +133,7 @@ public class FinancialsService{
      * @param expenseId Long
      * @param userId Long
      */
+    @Transactional
     public void deleteExpense(Long financialId, Long expenseId, Long userId){
         Financials financial = findOwned(financialId, userId);
         Expense expense = expenseRepository

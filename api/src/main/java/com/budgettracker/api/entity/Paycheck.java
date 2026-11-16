@@ -3,6 +3,8 @@ package com.budgettracker.api.entity;
 import jakarta.persistence.*;
 import lombok.Getter;
 import java.math.BigDecimal;
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * Paycheck database table
@@ -26,6 +28,10 @@ public class Paycheck {
 
     @Column(name = "savings_percent", nullable = false)
     private BigDecimal savingsPercent;
+
+    // This is needed if we wanna do cascade delete
+    @OneToMany(mappedBy = "paycheck", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<Financials> financials = new ArrayList<>();
 
     /**
      * Default constructor for Paycheck table
