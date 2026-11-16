@@ -15,11 +15,15 @@ npx expo start --web --clear
 Then open the application in http://localhost:8081
 
 #### Android
-Turn on an android emulator or connect an android device with USB, then run the following command in the app director (`cd app`).
+Turn on an android emulator, then run the following command in the app directory (`cd app`).
 ```
 npm run android
 ```
-It will take a few minutes for it to install and then open.
+To run on a USB connected android device, connect your USB to the device, set your USB settings to transferring files, and then run the following command in the app directory.
+```
+npx expo run:android --device
+```
+Press enter when it prompts you to select a device. It will take a few minutes for it to install and then open.
 
 ## Running API Tests
 Starting from the root, you will want to run the following commands.
