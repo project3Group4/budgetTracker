@@ -19,11 +19,18 @@ Turn on an android emulator, then run the following command in the app directory
 ```
 npm run android
 ```
+<!-- I FR can't get this to work right now
 To run on a USB connected android device, connect your USB to the device, set your USB settings to transferring files, and then run the following command in the app directory.
 ```
 npx expo run:android --device
 ```
 Press enter when it prompts you to select a device. It will take a few minutes for it to install and then open.
+<br>If connection fails, try running the following commands in the Android Studio terminal and then running the above command again.
+```
+export ANDROID_HOME= [PATH TO YOUR ANDROID SDK] ($HOME/Android/Sdk on linux)
+export PATH=$PATH:$ANDROID_HOME/emulator:$ANDROID_HOME/platform-tools
+```
+-->
 
 ## Running API Tests
 Starting from the root, you will want to run the following commands.
