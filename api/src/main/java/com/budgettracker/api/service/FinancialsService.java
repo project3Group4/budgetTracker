@@ -123,7 +123,7 @@ public class FinancialsService{
         Expense expense = expenseRepository
                 .findByIdAndFinancialId(expenseId, financial.getId())
                 .orElseThrow(() ->
-                        new ResponseStatusException(HttpStatus.NOT_FOUND, "Financial record not found"));
+                        new ResponseStatusException(HttpStatus.NOT_FOUND, "Expense not found"));
         return ExpenseResponse.from(expense);
     }
 
@@ -139,7 +139,7 @@ public class FinancialsService{
         Expense expense = expenseRepository
                 .findByIdAndFinancialId(expenseId, financial.getId())
                 .orElseThrow(() ->
-                        new ResponseStatusException(HttpStatus.NOT_FOUND, "Financial record not found"));
+                        new ResponseStatusException(HttpStatus.NOT_FOUND, "Expense not found"));
 
         expenseRepository.delete(expense);
     }
