@@ -1,7 +1,15 @@
 import { useState, useEffect } from 'react';
 import { View, Text, TextInput, StyleSheet, ScrollView, Pressable, Alert, Platform, useWindowDimensions} from 'react-native';
+import * as SecureStore from 'expo-secure-store';
 
-const API_URL = process.env.EXPO_PUBLIC_API_URL ?? 'http://localhost:8080';
+const API_URL = process.env.EXPO_PUBLIC_API_URL ?? (Platform.OS === 'android' ? 'http://10.0.2.2:8080': 'http://localhost:8080');
+//the promise<string | null> means the function asynchronously returns either token or null
+async function getToken(): Promise<string | null> {
+    if(Platform.OS === 'web'){
+        return localStorage.getItem('app_jwt');
+    }
+    return SecureStore.getItemAsync('app_jwt');
+}
 
 type Category = {
     id: number;
@@ -29,7 +37,7 @@ export default function LandingScreen() {
     async function fetchCategories() {
         try {
             //retrieves users authentication token
-            const token = localStorage.getItem('app_jwt');
+            const token = await getToken();
 
             if (!token) {
                 setError('You must be signed in.');
@@ -157,7 +165,7 @@ export default function LandingScreen() {
         setSaving(true);
 
         try{
-            const token = localStorage.getItem('app_jwt');
+            const token = await getToken();
             if (!token) {
                 setError('You must be signed in.');
                 return;
@@ -228,7 +236,7 @@ export default function LandingScreen() {
         setCheckingPaycheck(true);
 
         try {
-            const token = localStorage.getItem('app_jwt');
+            const token = await getToken();
 
             if (!token) {
                 setError('You must be signed in.');
@@ -351,7 +359,7 @@ export default function LandingScreen() {
                     style={[styles.primaryButton, (loading || saving || checkingPaycheck || categories.length === 0)
                         && styles.disabledButton]}
                     onPress={handleSeeFinancials}
-                    disabled={loading || saving || checkingPaycheck || categories.length ==== 0}
+                    disabled={loading || saving || checkingPaycheck || categories.length === 0}
                     accessibilityRole="button"
                 >
                     <Text style={styles.primaryButtonText}>
@@ -370,7 +378,8 @@ export default function LandingScreen() {
                     </Text>
                 </Pressable>
             </View>
-        </ScrollView>
+        </View>
+    </ScrollView>
     );
 }
 
@@ -433,7 +442,7 @@ const styles = StyleSheet.create({
         minHeight: 48,
     },
     section: {
-        borderTopWidth 1,
+        borderTopWidth: 1,
         borderTopColor: '#E2E8F0',
         paddingTop: 20,
         marginBottom: 25,
@@ -468,7 +477,8 @@ const styles = StyleSheet.create({
     },
     primaryButtonText: {
         color: '#FFFFFF',
-        fontSize: '600',
+        fontSize: 16,
+        fontWeight: '600',
     },
     secondaryButton: {
         backgroundColor: '#FFFFFF',

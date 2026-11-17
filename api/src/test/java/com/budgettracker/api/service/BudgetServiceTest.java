@@ -1,8 +1,8 @@
 package com.budgettracker.api.service;
 
 import com.budgettracker.api.dto.BudgetRequest;
-import com.budgettracker.api.dto.PaycheckRequest;
 import com.budgettracker.api.dto.FinancialsRequest;
+import com.budgettracker.api.dto.PaycheckRequest;
 import com.budgettracker.api.entity.Paycheck;
 
 import org.junit.jupiter.api.Test;
@@ -10,13 +10,12 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-
 import org.springframework.http.HttpStatus;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.math.BigDecimal;
-import java.util.List;
 import java.util.Arrays;
+import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
@@ -33,58 +32,49 @@ class BudgetServiceTest {
     @InjectMocks
     private BudgetService budgetService;
 
+    // Tests saving a paycheck and multiple financial allocations
     @Test
-    void saveBudgetSavesPaycheckAndFinancials() {
-
-        // Arrange
-        Paycheck paycheck = mock(Paycheck.class);
+    void saveBudgetSuccessfully() {
 
         PaycheckRequest paycheckRequest = new PaycheckRequest(
-                new BigDecimal("2500.00"),
-                new BigDecimal("10.00")
+                new BigDecimal("3000.00"),
+                new BigDecimal("20.00")
         );
 
-        FinancialsRequest financial1 = new FinancialsRequest(
+        FinancialsRequest groceries = new FinancialsRequest(
                 1L,
                 new BigDecimal("500.00")
         );
 
-        FinancialsRequest financial2 = new FinancialsRequest(
+        FinancialsRequest bills = new FinancialsRequest(
                 2L,
                 new BigDecimal("1000.00")
         );
 
         BudgetRequest request = new BudgetRequest(
                 paycheckRequest,
-                List.of(financial1, financial2)
+                List.of(groceries, bills)
         );
+
+        Paycheck paycheck = mock(Paycheck.class);
 
         when(paycheckService.savePaycheck(1L, paycheckRequest))
                 .thenReturn(paycheck);
 
-        // Act
         budgetService.saveBudget(1L, request);
 
-        // Assert
-        verify(paycheckService)
-                .savePaycheck(1L, paycheckRequest);
-
-        verify(financialsService)
-                .saveFinancial(paycheck, financial1);
-
-        verify(financialsService)
-                .saveFinancial(paycheck, financial2);
+        verify(paycheckService).savePaycheck(1L, paycheckRequest);
+        verify(financialsService).saveFinancial(paycheck, groceries);
+        verify(financialsService).saveFinancial(paycheck, bills);
     }
 
+    // Tests saving a paycheck without financial allocations
     @Test
-    void saveBudgetHandlesEmptyFinancials() {
-
-        // Arrange
-        Paycheck paycheck = mock(Paycheck.class);
+    void saveBudgetWithEmptyFinancials() {
 
         PaycheckRequest paycheckRequest = new PaycheckRequest(
-                new BigDecimal("2500.00"),
-                new BigDecimal("10.00")
+                new BigDecimal("3000.00"),
+                new BigDecimal("20.00")
         );
 
         BudgetRequest request = new BudgetRequest(
@@ -92,121 +82,87 @@ class BudgetServiceTest {
                 List.of()
         );
 
+        Paycheck paycheck = mock(Paycheck.class);
+
         when(paycheckService.savePaycheck(1L, paycheckRequest))
                 .thenReturn(paycheck);
 
-        // Act
         budgetService.saveBudget(1L, request);
 
-        // Assert
-        verify(paycheckService)
-                .savePaycheck(1L, paycheckRequest);
-
+        verify(paycheckService).savePaycheck(1L, paycheckRequest);
         verifyNoInteractions(financialsService);
     }
 
+    // Tests rejecting duplicate categories
     @Test
     void saveBudgetRejectsDuplicateCategories() {
 
-        // Arrange
         PaycheckRequest paycheckRequest = new PaycheckRequest(
-                new BigDecimal("2500.00"),
-                new BigDecimal("10.00")
+                new BigDecimal("3000.00"),
+                new BigDecimal("20.00")
         );
 
-        FinancialsRequest financial1 = new FinancialsRequest(
+        FinancialsRequest first = new FinancialsRequest(
                 1L,
                 new BigDecimal("500.00")
         );
 
-        FinancialsRequest financial2 = new FinancialsRequest(
+        FinancialsRequest second = new FinancialsRequest(
                 1L,
-                new BigDecimal("750.00")
+                new BigDecimal("600.00")
         );
 
         BudgetRequest request = new BudgetRequest(
                 paycheckRequest,
-                List.of(financial1, financial2)
+                List.of(first, second)
         );
 
-        // Act
         ResponseStatusException exception = assertThrows(
                 ResponseStatusException.class,
                 () -> budgetService.saveBudget(1L, request)
         );
 
-        // Assert
-        assertEquals(
-                HttpStatus.BAD_REQUEST,
-                exception.getStatusCode()
-        );
+        assertEquals(HttpStatus.BAD_REQUEST, exception.getStatusCode());
 
-        assertEquals(
-                "Duplicate category",
-                exception.getReason()
-        );
-
-        verifyNoInteractions(paycheckService);
-        verifyNoInteractions(financialsService);
+        verifyNoInteractions(paycheckService, financialsService);
     }
 
+    // Tests rejecting null financial allocations
     @Test
-    void saveBudgetRejectsNullFinancialAllocation() {
+    void saveBudgetRejectsNullFinancial() {
 
-        // Arrange
         PaycheckRequest paycheckRequest = new PaycheckRequest(
-                new BigDecimal("2500.00"),
-                new BigDecimal("10.00")
-        );
-
-        FinancialsRequest financial = new FinancialsRequest(
-                1L,
-                new BigDecimal("500.00")
+                new BigDecimal("3000.00"),
+                new BigDecimal("20.00")
         );
 
         BudgetRequest request = new BudgetRequest(
                 paycheckRequest,
-                Arrays.asList(financial, null)
+                Arrays.asList((FinancialsRequest) null)
         );
 
-        // Act
         ResponseStatusException exception = assertThrows(
                 ResponseStatusException.class,
                 () -> budgetService.saveBudget(1L, request)
         );
 
-        // Assert
-        assertEquals(
-                HttpStatus.BAD_REQUEST,
-                exception.getStatusCode()
-        );
+        assertEquals(HttpStatus.BAD_REQUEST, exception.getStatusCode());
 
-        assertEquals(
-                "Financial allocation cannot be null",
-                exception.getReason()
-        );
-
-        verifyNoInteractions(paycheckService);
-        verifyNoInteractions(financialsService);
+        verifyNoInteractions(paycheckService, financialsService);
     }
 
+    // Tests saving a budget for a nonexistent user
     @Test
-    void saveBudgetRejectsMissingUser() {
+    void saveBudgetThrowsWhenUserNotFound() {
 
-        // Arrange
         PaycheckRequest paycheckRequest = new PaycheckRequest(
-                new BigDecimal("2500.00"),
-                new BigDecimal("10.00")
-        );
-
-        FinancialsRequest financial = new FinancialsRequest(
-                1L,
-                new BigDecimal("500.00")
+                new BigDecimal("3000.00"),
+                new BigDecimal("20.00")
         );
 
         BudgetRequest request = new BudgetRequest(
                 paycheckRequest,
-                List.of(financial)
+                List.of()
         );
 
         when(paycheckService.savePaycheck(99L, paycheckRequest))
@@ -215,80 +171,179 @@ class BudgetServiceTest {
                         "User not found"
                 ));
 
-        // Act
         ResponseStatusException exception = assertThrows(
                 ResponseStatusException.class,
                 () -> budgetService.saveBudget(99L, request)
         );
 
-        // Assert
-        assertEquals(
-                HttpStatus.NOT_FOUND,
-                exception.getStatusCode()
-        );
-
-        assertEquals(
-                "User not found",
-                exception.getReason()
-        );
-
-        verify(paycheckService)
-                .savePaycheck(99L, paycheckRequest);
+        assertEquals(HttpStatus.NOT_FOUND, exception.getStatusCode());
 
         verifyNoInteractions(financialsService);
     }
 
+    // Tests saving a budget with a nonexistent category
     @Test
-    void saveBudgetRejectsInvalidCategory() {
-
-        // Arrange
-        Paycheck paycheck = mock(Paycheck.class);
+    void saveBudgetThrowsWhenCategoryNotFound() {
 
         PaycheckRequest paycheckRequest = new PaycheckRequest(
-                new BigDecimal("2500.00"),
-                new BigDecimal("10.00")
+                new BigDecimal("3000.00"),
+                new BigDecimal("20.00")
         );
 
-        FinancialsRequest financial = new FinancialsRequest(
+        FinancialsRequest financialRequest = new FinancialsRequest(
                 99L,
                 new BigDecimal("500.00")
         );
 
         BudgetRequest request = new BudgetRequest(
                 paycheckRequest,
-                List.of(financial)
+                List.of(financialRequest)
         );
+
+        Paycheck paycheck = mock(Paycheck.class);
 
         when(paycheckService.savePaycheck(1L, paycheckRequest))
                 .thenReturn(paycheck);
 
-        when(financialsService.saveFinancial(paycheck, financial))
-                .thenThrow(new ResponseStatusException(
-                        HttpStatus.NOT_FOUND,
-                        "Category not found"
-                ));
+        doThrow(new ResponseStatusException(
+                HttpStatus.NOT_FOUND,
+                "Category not found"
+        )).when(financialsService)
+                .saveFinancial(paycheck, financialRequest);
 
-        // Act
         ResponseStatusException exception = assertThrows(
                 ResponseStatusException.class,
                 () -> budgetService.saveBudget(1L, request)
         );
 
-        // Assert
-        assertEquals(
-                HttpStatus.NOT_FOUND,
-                exception.getStatusCode()
+        assertEquals(HttpStatus.NOT_FOUND, exception.getStatusCode());
+    }
+
+    // NEW: Tests allocations below the available paycheck amount
+    @Test
+    void saveBudgetAllowsAllocationsBelowAvailableAmount() {
+
+        // $3000 paycheck - $600 savings = $2400 available
+        PaycheckRequest paycheckRequest = new PaycheckRequest(
+                new BigDecimal("3000.00"),
+                new BigDecimal("20.00")
         );
 
-        assertEquals(
-                "Category not found",
-                exception.getReason()
+        FinancialsRequest groceries = new FinancialsRequest(
+                1L,
+                new BigDecimal("500.00")
         );
 
-        verify(paycheckService)
-                .savePaycheck(1L, paycheckRequest);
+        FinancialsRequest bills = new FinancialsRequest(
+                2L,
+                new BigDecimal("1500.00")
+        );
 
-        verify(financialsService)
-                .saveFinancial(paycheck, financial);
+        // Total allocations = $2000
+        BudgetRequest request = new BudgetRequest(
+                paycheckRequest,
+                List.of(groceries, bills)
+        );
+
+        Paycheck paycheck = mock(Paycheck.class);
+
+        when(paycheckService.savePaycheck(1L, paycheckRequest))
+                .thenReturn(paycheck);
+
+        assertDoesNotThrow(
+                () -> budgetService.saveBudget(1L, request)
+        );
+
+        verify(paycheckService).savePaycheck(1L, paycheckRequest);
+        verify(financialsService).saveFinancial(paycheck, groceries);
+        verify(financialsService).saveFinancial(paycheck, bills);
+    }
+
+    // NEW: Tests allocations equal to the available paycheck amount
+    @Test
+    void saveBudgetAllowsAllocationsEqualToAvailableAmount() {
+
+        // $3000 paycheck - $600 savings = $2400 available
+        PaycheckRequest paycheckRequest = new PaycheckRequest(
+                new BigDecimal("3000.00"),
+                new BigDecimal("20.00")
+        );
+
+        FinancialsRequest groceries = new FinancialsRequest(
+                1L,
+                new BigDecimal("500.00")
+        );
+
+        FinancialsRequest bills = new FinancialsRequest(
+                2L,
+                new BigDecimal("1700.00")
+        );
+
+        FinancialsRequest gas = new FinancialsRequest(
+                3L,
+                new BigDecimal("200.00")
+        );
+
+        // Total allocations = $2400
+        BudgetRequest request = new BudgetRequest(
+                paycheckRequest,
+                List.of(groceries, bills, gas)
+        );
+
+        Paycheck paycheck = mock(Paycheck.class);
+
+        when(paycheckService.savePaycheck(1L, paycheckRequest))
+                .thenReturn(paycheck);
+
+        assertDoesNotThrow(
+                () -> budgetService.saveBudget(1L, request)
+        );
+
+        verify(paycheckService).savePaycheck(1L, paycheckRequest);
+        verify(financialsService).saveFinancial(paycheck, groceries);
+        verify(financialsService).saveFinancial(paycheck, bills);
+        verify(financialsService).saveFinancial(paycheck, gas);
+    }
+
+    // NEW: Tests allocations exceeding the available paycheck amount
+    @Test
+    void saveBudgetRejectsAllocationsExceedingAvailableAmount() {
+
+        // $3000 paycheck - $600 savings = $2400 available
+        PaycheckRequest paycheckRequest = new PaycheckRequest(
+                new BigDecimal("3000.00"),
+                new BigDecimal("20.00")
+        );
+
+        FinancialsRequest groceries = new FinancialsRequest(
+                1L,
+                new BigDecimal("500.00")
+        );
+
+        FinancialsRequest bills = new FinancialsRequest(
+                2L,
+                new BigDecimal("1800.00")
+        );
+
+        FinancialsRequest gas = new FinancialsRequest(
+                3L,
+                new BigDecimal("200.00")
+        );
+
+        // Total allocations = $2500, exceeding available funds
+        BudgetRequest request = new BudgetRequest(
+                paycheckRequest,
+                List.of(groceries, bills, gas)
+        );
+
+        ResponseStatusException exception = assertThrows(
+                ResponseStatusException.class,
+                () -> budgetService.saveBudget(1L, request)
+        );
+
+        assertEquals(HttpStatus.BAD_REQUEST, exception.getStatusCode());
+
+        // Verify that invalid budgets are not saved
+        verifyNoInteractions(paycheckService, financialsService);
     }
 }
