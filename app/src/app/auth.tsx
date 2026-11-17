@@ -10,8 +10,8 @@ import { makeRedirectUri } from "expo-auth-session";
 import * as SecureStore from "expo-secure-store";
 
 const apiUrl =
-  process.env.EXPO_PUBLIC_API_URL ??
-  "http://localhost:8080";
+    process.env.EXPO_PUBLIC_API_URL ??
+    (Platform.OS === "android" ? "http://10.0.2.2:8080": "http://localhost:8080");
 
 async function getCodeVerifier() {
   if (Platform.OS === "web") {
@@ -117,7 +117,7 @@ export default function AuthRedirectScreen() {
         await saveUser(data.user);
         await removeCodeVerifier();
 
-        router.replace("/");
+        router.replace("/landing");
       } catch (error) {
         const errorMessage =
           error instanceof Error
