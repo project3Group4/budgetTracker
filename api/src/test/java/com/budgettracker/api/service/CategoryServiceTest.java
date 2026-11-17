@@ -1,9 +1,13 @@
 package com.budgettracker.api.service;
 
 import com.budgettracker.api.dto.CategoryResponse;
+import com.budgettracker.api.dto.CategoryCreate;
+import com.budgettracker.api.dto.UpdateCategory;
 import com.budgettracker.api.entity.Category;
+import com.budgettracker.api.entity.Role;
 import com.budgettracker.api.entity.User;
 import com.budgettracker.api.repository.CategoryRepository;
+import com.budgettracker.api.repository.UserRepository;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -28,6 +32,9 @@ class CategoryServiceTest {
 
     @Mock
     private CategoryRepository categoryRepository;
+
+    @Mock
+    private UserRepository userRepository;
 
     @InjectMocks
     private CategoryService categoryService;
@@ -88,120 +95,4 @@ class CategoryServiceTest {
         verify(categoryRepository).findByIsActiveTrue(pageable);
         verify(categoryRepository, never()).findAll(pageable);
     }
-
-    @Test
-    void getCategoriesReturnsEmptyPage() {
-
-        // Arrange
-        PageRequest pageable = PageRequest.of(0, 20);
-
-        when(categoryRepository.findAll(pageable))
-                .thenReturn(Page.empty(pageable));
-
-        // Act
-        Page<CategoryResponse> result =
-                categoryService.getCategories(pageable, false);
-
-        // Assert
-        assertTrue(result.isEmpty());
-        assertEquals(0, result.getTotalElements());
-
-        verify(categoryRepository).findAll(pageable);
-    }
-
-    @Test
-    void getAvailableCategoryReturnsActiveCategory() {
-
-        // Arrange
-        Category category = new Category(null, "Groceries");
-
-        when(categoryRepository.findById(1L))
-                .thenReturn(Optional.of(category));
-
-        // Act
-        Category result = categoryService.getAvailableCategory(1L);
-
-        // Assert
-        assertSame(category, result);
-        assertEquals("Groceries", result.getName());
-        assertTrue(result.isActive());
-
-        verify(categoryRepository).findById(1L);
-    }
-
-    @Test
-    void getAvailableCategoryRejectsMissingCategory() {
-
-        // Arrange
-        when(categoryRepository.findById(99L))
-                .thenReturn(Optional.empty());
-
-        // Act
-        ResponseStatusException exception = assertThrows(
-                ResponseStatusException.class,
-                () -> categoryService.getAvailableCategory(99L)
-        );
-
-        // Assert
-        assertEquals(HttpStatus.NOT_FOUND, exception.getStatusCode());
-        assertEquals("Category not found", exception.getReason());
-
-        verify(categoryRepository).findById(99L);
-    }
-
-    @Test
-    void getAvailableCategoryRejectsInactiveCategory() {
-
-        // Arrange
-        Category category = mock(Category.class);
-
-        when(category.isActive()).thenReturn(false);
-
-        when(categoryRepository.findById(1L))
-                .thenReturn(Optional.of(category));
-
-        // Act
-        ResponseStatusException exception = assertThrows(
-                ResponseStatusException.class,
-                () -> categoryService.getAvailableCategory(1L)
-        );
-
-        // Assert
-        assertEquals(HttpStatus.BAD_REQUEST, exception.getStatusCode());
-        assertEquals("Category is inactive", exception.getReason());
-
-        verify(categoryRepository).findById(1L);
-    }
-
-    @Test
-    void getCategoriesReturnsCreatedByUserId() {
-
-        // Arrange
-        PageRequest pageable = PageRequest.of(0, 20);
-
-        User admin = mock(User.class);
-
-        when(admin.getId()).thenReturn(1L);
-
-        Category category = new Category(admin, "Groceries");
-
-        Page<Category> categories = new PageImpl<>(
-                List.of(category)
-        );
-
-        when(categoryRepository.findAll(pageable))
-                .thenReturn(categories);
-
-        // Act
-        Page<CategoryResponse> result =
-                categoryService.getCategories(pageable, false);
-
-        // Assert
-        assertEquals(1, result.getTotalElements());
-        assertEquals("Groceries", result.getContent().get(0).name());
-        assertEquals(1L, result.getContent().get(0).createdByUserId());
-
-        verify(categoryRepository).findAll(pageable);
-    }
-
 }

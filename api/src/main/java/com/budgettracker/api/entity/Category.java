@@ -6,10 +6,12 @@ import lombok.Getter;
 @Entity
 @Table(name = "category")
 @Getter
-public class Category{
+/**
+ * Represents a spending category stored in the database.
+ */
+public class Category {
 
     @Id
-    //creates unique ID for each category
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "category_id")
     private Long id;
@@ -18,18 +20,48 @@ public class Category{
     @JoinColumn(name = "created_by_user_id")
     private User createdByUser;
 
-    //category name
     @Column(name = "name", nullable = false)
     private String name;
 
     @Column(name = "is_active", nullable = false)
     private boolean isActive = true;
 
-    protected Category(){
+    /**
+     * Required by JPA.
+     */
+    protected Category() {
     }
 
-    public Category(User createdByUser, String name){
+    /**
+     * Creates an active category.
+     *
+     * @param createdByUser user who created the category
+     * @param name category name
+     */
+    public Category(User createdByUser, String name) {
         this.createdByUser = createdByUser;
         this.name = name;
+    }
+
+    /**
+     * Creates a category with a specified active status.
+     *
+     * @param createdByUser user who created the category
+     * @param name category name
+     * @param isActive whether the category is active
+     */
+    public Category(User createdByUser, String name, boolean isActive) {
+        this.createdByUser = createdByUser;
+        this.name = name;
+        this.isActive = isActive;
+    }
+
+    /**
+     * Updates the category's active status.
+     *
+     * @param active the new active status
+     */
+    public void updateActive(boolean active) {
+        this.isActive = active;
     }
 }
