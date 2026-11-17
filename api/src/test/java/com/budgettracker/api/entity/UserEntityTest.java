@@ -1,10 +1,8 @@
-package com.budgettracker.api;
-import com.budgettracker.api.entity.User;
-import com.budgettracker.api.entity.Role;
+package com.budgettracker.api.entity;
 import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.*;
 
-class UserTest{
+class UserEntityTest {
     @Test
     void testConstructorWorks(){
         User user = new User("test.email@gmail.com", "testAdmin", Role.ADMIN);
