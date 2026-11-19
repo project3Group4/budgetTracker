@@ -14,13 +14,20 @@ import {
   useAutoDiscovery,
 } from "expo-auth-session";
 import * as SecureStore from "expo-secure-store";
+import { GoogleSignin } from "@react-native-google-signin/google-signin";
 
-// complete oauth popups when the provider redirects back to the app.
 WebBrowser.maybeCompleteAuthSession();
 
 const redirectUri = makeRedirectUri({
   path: "auth",
 });
+
+const apiUrl =
+  Platform.OS === "android"
+    ? process.env.EXPO_PUBLIC_ANDROID_API_URL ??
+      "http://10.0.2.2:8080"
+    : process.env.EXPO_PUBLIC_API_URL ??
+      "http://localhost:8080";
 
 const githubDiscovery = {
   authorizationEndpoint:
@@ -35,6 +42,12 @@ const githubClientId =
 const googleClientId =
   process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID;
 
+if (Platform.OS === "android" && googleClientId) {
+  GoogleSignin.configure({
+    webClientId: googleClientId,
+  });
+}
+
 type SavedUser = {
   id: number;
   email: string;
@@ -43,7 +56,6 @@ type SavedUser = {
 };
 
 async function saveCodeVerifier(verifier: string) {
-  // store the pkce verifier until the provider redirects back to the app.
   if (Platform.OS === "web") {
     sessionStorage.setItem(
       "oauth_code_verifier",
@@ -58,7 +70,6 @@ async function saveCodeVerifier(verifier: string) {
 }
 
 async function saveOAuthProvider(provider: string) {
-  // store the provider so the callback route knows which api endpoint to use.
   if (Platform.OS === "web") {
     sessionStorage.setItem(
       "oauth_provider",
@@ -72,19 +83,34 @@ async function saveOAuthProvider(provider: string) {
   }
 }
 
+async function saveToken(token: string) {
+  if (Platform.OS === "web") {
+    localStorage.setItem("app_jwt", token);
+  } else {
+    await SecureStore.setItemAsync("app_jwt", token);
+  }
+}
+
+async function saveUser(user: SavedUser) {
+  const userJson = JSON.stringify(user);
+
+  if (Platform.OS === "web") {
+    localStorage.setItem("app_user", userJson);
+  } else {
+    await SecureStore.setItemAsync("app_user", userJson);
+  }
+}
+
 async function getSavedUser(): Promise<SavedUser | null> {
-  // retrieve the saved user from the platform's local storage.
   const userJson =
     Platform.OS === "web"
       ? localStorage.getItem("app_user")
       : await SecureStore.getItemAsync("app_user");
 
-  // convert the stored json text back into a user object.
   return userJson ? JSON.parse(userJson) : null;
 }
 
 async function clearSession() {
-  // remove the application session from the current platform.
   if (Platform.OS === "web") {
     localStorage.removeItem("app_jwt");
     localStorage.removeItem("app_user");
@@ -98,6 +124,20 @@ async function clearSession() {
   }
 }
 
+function getApiError(responseText: string) {
+  try {
+    const errorData = JSON.parse(responseText);
+
+    return (
+      errorData.detail ??
+      errorData.message ??
+      "Google sign-in failed."
+    );
+  } catch {
+    return responseText || "Google sign-in failed.";
+  }
+}
+
 export default function HomeScreen() {
   const router = useRouter();
 
@@ -106,7 +146,6 @@ export default function HomeScreen() {
 
   const [message, setMessage] = useState("");
 
-  // load the saved user when the home screen opens.
   useEffect(() => {
     getSavedUser().then(setUser);
   }, []);
@@ -144,54 +183,48 @@ export default function HomeScreen() {
   );
 
   useEffect(() => {
-    // read the authorization code returned by either oauth popup.
-    const githubCode =
-      githubResponse?.type === "success"
-        ? githubResponse.params?.code
-        : undefined;
-
-    const googleCode =
-      googleResponse?.type === "success"
-        ? googleResponse.params?.code
-        : undefined;
-
-    // use whichever provider returned a successful authorization code.
-    const code = githubCode ?? googleCode;
-
-    // wait until a provider returns a successful authorization code.
-    if (!code) {
-      return;
+    if (
+      githubResponse?.type === "success" &&
+      githubResponse.params.code
+    ) {
+      router.replace(
+        `/auth?code=${encodeURIComponent(
+          githubResponse.params.code
+        )}`
+      );
     }
+  }, [githubResponse, router]);
 
-    // send the authorization code to the callback screen.
-    router.replace({
-      pathname: "/auth",
-      params: { code },
-    });
-  }, [githubResponse, googleResponse, router]);
+  useEffect(() => {
+    if (
+      googleResponse?.type === "success" &&
+      googleResponse.params.code
+    ) {
+      router.replace(
+        `/auth?code=${encodeURIComponent(
+          googleResponse.params.code
+        )}`
+      );
+    }
+  }, [googleResponse, router]);
 
   const signInWithGitHub = async () => {
-    // wait until expo creates the github authorization request.
     if (!githubRequest) {
       setMessage("GitHub login is not ready yet.");
       return;
     }
 
-    // save the verifier needed by the api to finish the pkce exchange.
     if (githubRequest.codeVerifier) {
       await saveCodeVerifier(
         githubRequest.codeVerifier
       );
     }
 
-    // tell the callback route that this request belongs to github.
     await saveOAuthProvider("github");
 
-    // open github's authorization page.
     const result = await githubPromptAsync();
 
-    // show a message when github rejects or cancels the login.
-    if (result.type === "error") {
+    if (result.type !== "success") {
       setMessage(
         "GitHub sign-in was cancelled or rejected."
       );
@@ -199,46 +232,100 @@ export default function HomeScreen() {
   };
 
   const signInWithGoogleWeb = async () => {
-    // only use this authorization-code flow in the web browser.
-    if (Platform.OS !== "web") {
-      setMessage(
-        "Native Google sign-in will be added next."
-      );
-      return;
-    }
-
-    // wait until expo creates the google authorization request.
     if (!googleRequest) {
       setMessage("Google login is not ready yet.");
       return;
     }
 
-    // save the verifier needed by the api to finish the pkce exchange.
     if (googleRequest.codeVerifier) {
       await saveCodeVerifier(
         googleRequest.codeVerifier
       );
     }
 
-    // tell the callback route that this request belongs to google.
     await saveOAuthProvider("google");
 
-    // open google's authorization page.
     const result = await googlePromptAsync();
 
-    // show a message when google rejects or cancels the login.
-    if (result.type === "error") {
+    if (result.type !== "success") {
       setMessage(
         "Google sign-in was cancelled or rejected."
       );
     }
   };
 
+  const signInWithGoogleAndroid = async () => {
+    if (Platform.OS !== "android") {
+      return;
+    }
+
+    if (!googleClientId) {
+      setMessage("Google client ID is missing.");
+      return;
+    }
+
+    try {
+      await GoogleSignin.hasPlayServices({
+        showPlayServicesUpdateDialog: true,
+      });
+
+      const result = await GoogleSignin.signIn();
+
+      if (result.type !== "success") {
+        setMessage("Google sign-in was cancelled.");
+        return;
+      }
+
+      const idToken = result.data.idToken;
+
+      if (!idToken) {
+        setMessage(
+          "Google did not return an ID token."
+        );
+        return;
+      }
+
+      const response = await fetch(
+        `${apiUrl}/auth/google`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            idToken,
+          }),
+        }
+      );
+
+      const responseText = await response.text();
+
+      if (!response.ok) {
+        setMessage(getApiError(responseText));
+        return;
+      }
+
+      const data = JSON.parse(responseText);
+
+      await saveToken(data.token);
+      await saveUser(data.user);
+
+      setUser(data.user);
+      setMessage("Signed in with Google.");
+    } catch {
+      setMessage(
+        "Could not complete Google sign-in."
+      );
+    }
+  };
+
   const signOut = async () => {
-    // remove the saved jwt and user information.
     await clearSession();
 
-    // update the screen after signing out.
+    if (Platform.OS === "android") {
+      await GoogleSignin.signOut();
+    }
+
     setUser(null);
     setMessage("You have been signed out.");
   };
@@ -268,11 +355,16 @@ export default function HomeScreen() {
             onPress={signInWithGitHub}
           />
 
-          {Platform.OS === "web" && (
+          {Platform.OS === "web" ? (
             <Button
               title="Sign in with Google"
               disabled={!googleRequest}
               onPress={signInWithGoogleWeb}
+            />
+          ) : (
+            <Button
+              title="Sign in with Google"
+              onPress={signInWithGoogleAndroid}
             />
           )}
         </>
