@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { View, Text, TextInput, StyleSheet, ScrollView, Pressable, Alert, Platform, useWindowDimensions} from 'react-native';
 import * as SecureStore from 'expo-secure-store';
+import { useRouter } from 'expo-router';
 
 const API_URL = process.env.EXPO_PUBLIC_API_URL ?? (Platform.OS === 'android' ? 'http://10.0.2.2:8080': 'http://localhost:8080');
 //the promise<string | null> means the function asynchronously returns either token or null
@@ -19,6 +20,7 @@ type Category = {
 };
 
 export default function LandingScreen() {
+    const router = useRouter();
 //  useState stores values entered by user
     //allows layout to adjust automatically based on screen width
     const {width} = useWindowDimensions();
@@ -216,7 +218,7 @@ export default function LandingScreen() {
                 return;
             }
             console.log('Budget saved successfully.');
-            //TODO: Navigate to homepage after successful save
+            router.replace('/home');
 
         }catch(err){
             setError('Unable to connect to server. Please try again.');
@@ -276,7 +278,7 @@ export default function LandingScreen() {
                 return;
             }
             console.log('Previous paycheck found.');
-            //TODO: Navigate to homepage once implemented
+            router.replace('/home');
 
         } catch (err) {
             setError('Unable to connect to server. Please try again.');
