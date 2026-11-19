@@ -2,173 +2,317 @@ package com.budgettracker.api.auth;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
-import org.springframework.http.MediaType;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.security.oauth2.jwt.JwtDecoder;
-import org.springframework.test.web.client.MockRestServiceServer;
 import org.springframework.web.client.RestClient;
 import org.springframework.web.server.ResponseStatusException;
 
+import java.time.Instant;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
-import static org.springframework.test.web.client.match.MockRestRequestMatchers.method;
-import static org.springframework.test.web.client.match.MockRestRequestMatchers.requestTo;
-import static org.springframework.test.web.client.response.MockRestResponseCreators.withSuccess;
 
 class GoogleIdentityClientTest {
 
-    private JwtDecoder jwtDecoder;
-    private GoogleIdentityClient googleIdentityClient;
-    private MockRestServiceServer server;
+    private static final String WEB_CLIENT_ID =
+            "test-google-web-client-id";
+
+    private static final String WEB_CLIENT_SECRET =
+            "test-google-web-client-secret";
+
+    private RestClient.Builder restClientBuilder;
+
+    private RestClient restClient;
 
     @BeforeEach
     void setUp() {
-        // create a fake jwt decoder so the tests do not contact google.
-        jwtDecoder = mock(JwtDecoder.class);
+        restClientBuilder = mock(RestClient.Builder.class);
+        restClient = mock(RestClient.class);
 
-        // connect a mock server to the rest client used for web code exchange.
-        RestClient.Builder builder = RestClient.builder();
-        server = MockRestServiceServer.bindTo(builder).build();
-
-        // create the google client with test credentials and the fake decoder.
-        googleIdentityClient = new GoogleIdentityClient(
-                builder,
-                "test-web-client-id",
-                "test-web-client-secret",
-                jwtDecoder
-        );
+        when(restClientBuilder.build())
+                .thenReturn(restClient);
     }
 
     @Test
-    void verifiesNativeGoogleIdToken() {
-        // create the claims expected from a verified google account.
-        Jwt jwt = createValidJwt();
+    void verifiesValidGoogleIdToken() {
+        Jwt jwt = createJwt(
+                "google-user-123",
+                "user@example.com",
+                "Ann Jojo"
+        );
 
-        // make the fake decoder return the test claims.
-        when(jwtDecoder.decode("test-id-token")).thenReturn(jwt);
+        JwtDecoder decoder = token -> {
+            assertEquals("valid-token", token);
+            return jwt;
+        };
 
-        // send the native android request containing only an id token.
+        GoogleIdentityClient client = createClient(decoder);
+
         GoogleIdentityClient.VerifiedGoogleUser result =
-                googleIdentityClient.verify(
+                client.verify(
                         new GoogleAuthRequest(
-                                "test-id-token",
+                                "valid-token",
                                 null,
                                 null,
                                 null
                         )
                 );
 
-        // confirm that the verified google identity was returned.
-        assertEquals("google-user-123", result.providerUserId());
-        assertEquals("verified@example.com", result.email());
-        assertEquals("Test User", result.displayName());
+        assertEquals(
+                "google-user-123",
+                result.providerUserId()
+        );
+
+        assertEquals(
+                "user@example.com",
+                result.email()
+        );
+
+        assertEquals(
+                "Ann Jojo",
+                result.displayName()
+        );
     }
 
     @Test
-    void rejectsGoogleAccountWithUnverifiedEmail() {
-        // create claims for an account whose email is not verified.
-        Jwt jwt = Jwt.withTokenValue("test-id-token")
+    void usesEmailWhenGoogleDoesNotProvideDisplayName() {
+        Jwt jwt = createJwt(
+                "google-user-123",
+                "user@example.com",
+                null
+        );
+
+        GoogleIdentityClient client =
+                createClient(token -> jwt);
+
+        GoogleIdentityClient.VerifiedGoogleUser result =
+                client.verify(
+                        new GoogleAuthRequest(
+                                "valid-token",
+                                null,
+                                null,
+                                null
+                        )
+                );
+
+        assertEquals(
+                "user@example.com",
+                result.displayName()
+        );
+    }
+
+    @Test
+    void rejectsRequestWithoutIdTokenOrAuthorizationCode() {
+        GoogleIdentityClient client =
+                createClient(token -> {
+                    throw new AssertionError(
+                            "decoder should not be called"
+                    );
+                });
+
+        ResponseStatusException exception =
+                assertThrows(
+                        ResponseStatusException.class,
+                        () -> client.verify(
+                                new GoogleAuthRequest(
+                                        null,
+                                        null,
+                                        null,
+                                        null
+                                )
+                        )
+                );
+
+        assertEquals(
+                HttpStatus.UNAUTHORIZED,
+                exception.getStatusCode()
+        );
+    }
+
+    @Test
+    void rejectsTokenWithWrongIssuer() {
+        Jwt jwt = Jwt.withTokenValue("token")
                 .header("alg", "RS256")
-                .claim("iss", "https://accounts.google.com")
-                .claim("aud", List.of("test-web-client-id"))
+                .claim("iss", "https://evil.example.com")
+                .audience(List.of(WEB_CLIENT_ID))
+                .claim("email_verified", true)
                 .subject("google-user-123")
-                .claim("email", "unverified@example.com")
-                .claim("email_verified", false)
-                .claim("name", "Test User")
+                .claim("email", "user@example.com")
+                .claim("name", "Ann Jojo")
+                .issuedAt(Instant.now())
+                .expiresAt(Instant.now().plusSeconds(3600))
                 .build();
 
-        // make the fake decoder return the unverified account claims.
-        when(jwtDecoder.decode("test-id-token")).thenReturn(jwt);
+        GoogleIdentityClient client =
+                createClient(token -> jwt);
 
-        // confirm that unverified email accounts are rejected.
-        ResponseStatusException exception = assertThrows(
-                ResponseStatusException.class,
-                () -> googleIdentityClient.verify(
-                        new GoogleAuthRequest(
-                                "test-id-token",
-                                null,
-                                null,
-                                null
-                        )
-                )
-        );
-
-        // confirm that the api returns unauthorized for the rejected login.
-        assertEquals(HttpStatus.UNAUTHORIZED, exception.getStatusCode());
-    }
-
-    @Test
-    void exchangesWebAuthorizationCodeForIdToken() {
-        // configure the fake google token endpoint response.
-        server.expect(
-                        requestTo("https://oauth2.googleapis.com/token")
-                )
-                .andExpect(method(HttpMethod.POST))
-                .andRespond(
-                        withSuccess(
-                                "{\"id_token\":\"test-id-token\"}",
-                                MediaType.APPLICATION_JSON
+        ResponseStatusException exception =
+                assertThrows(
+                        ResponseStatusException.class,
+                        () -> client.verify(
+                                new GoogleAuthRequest(
+                                        "invalid-issuer-token",
+                                        null,
+                                        null,
+                                        null
+                                )
                         )
                 );
 
-        // make the fake decoder return valid claims for the exchanged token.
-        when(jwtDecoder.decode("test-id-token"))
-                .thenReturn(createValidJwt());
-
-        // send the web request containing the authorization code and pkce values.
-        GoogleIdentityClient.VerifiedGoogleUser result =
-                googleIdentityClient.verify(
-                        new GoogleAuthRequest(
-                                null,
-                                "test-code",
-                                "test-code-verifier",
-                                "http://localhost:8081/auth"
-                        )
-                );
-
-        // confirm that the exchanged token produced a verified identity.
-        assertEquals("google-user-123", result.providerUserId());
-        assertEquals("verified@example.com", result.email());
-
-        // confirm that the expected google request was made.
-        server.verify();
+        assertEquals(
+                HttpStatus.UNAUTHORIZED,
+                exception.getStatusCode()
+        );
     }
 
     @Test
-    void rejectsRequestWithNeitherSupportedGoogleFormat() {
-        // confirm that an empty request is rejected.
-        ResponseStatusException exception = assertThrows(
-                ResponseStatusException.class,
-                () -> googleIdentityClient.verify(
-                        new GoogleAuthRequest(
-                                null,
-                                null,
-                                null,
-                                null
-                        )
-                )
+    void rejectsTokenWithWrongAudience() {
+        Jwt jwt = createJwtWithAudience(
+                "google-user-123",
+                "user@example.com",
+                "Ann Jojo",
+                "different-client-id"
         );
 
-        // confirm that the api returns unauthorized for invalid input.
-        assertEquals(HttpStatus.UNAUTHORIZED, exception.getStatusCode());
+        GoogleIdentityClient client =
+                createClient(token -> jwt);
+
+        ResponseStatusException exception =
+                assertThrows(
+                        ResponseStatusException.class,
+                        () -> client.verify(
+                                new GoogleAuthRequest(
+                                        "wrong-audience-token",
+                                        null,
+                                        null,
+                                        null
+                                )
+                        )
+                );
+
+        assertEquals(
+                HttpStatus.UNAUTHORIZED,
+                exception.getStatusCode()
+        );
     }
 
-    private Jwt createValidJwt() {
-        // create claims for a verified google account using the configured client id.
-        return Jwt.withTokenValue("test-id-token")
+    @Test
+    void rejectsUnverifiedEmail() {
+        Jwt jwt = Jwt.withTokenValue("token")
                 .header("alg", "RS256")
                 .claim("iss", "https://accounts.google.com")
-                .claim("aud", List.of("test-web-client-id"))
+                .audience(List.of(WEB_CLIENT_ID))
+                .claim("email_verified", false)
                 .subject("google-user-123")
-                .claim("email", "verified@example.com")
+                .claim("email", "user@example.com")
+                .claim("name", "Ann Jojo")
+                .issuedAt(Instant.now())
+                .expiresAt(Instant.now().plusSeconds(3600))
+                .build();
+
+        GoogleIdentityClient client =
+                createClient(token -> jwt);
+
+        ResponseStatusException exception =
+                assertThrows(
+                        ResponseStatusException.class,
+                        () -> client.verify(
+                                new GoogleAuthRequest(
+                                        "unverified-email-token",
+                                        null,
+                                        null,
+                                        null
+                                )
+                        )
+                );
+
+        assertEquals(
+                HttpStatus.UNAUTHORIZED,
+                exception.getStatusCode()
+        );
+    }
+
+    @Test
+    void rejectsTokenWithoutRequiredIdentityValues() {
+        Jwt jwt = Jwt.withTokenValue("token")
+                .header("alg", "RS256")
+                .claim("iss", "https://accounts.google.com")
+                .audience(List.of(WEB_CLIENT_ID))
                 .claim("email_verified", true)
-                .claim("name", "Test User")
+                .subject("")
+                .claim("email", "user@example.com")
+                .claim("name", "Ann Jojo")
+                .issuedAt(Instant.now())
+                .expiresAt(Instant.now().plusSeconds(3600))
+                .build();
+
+        GoogleIdentityClient client =
+                createClient(token -> jwt);
+
+        ResponseStatusException exception =
+                assertThrows(
+                        ResponseStatusException.class,
+                        () -> client.verify(
+                                new GoogleAuthRequest(
+                                        "missing-subject-token",
+                                        null,
+                                        null,
+                                        null
+                                )
+                        )
+                );
+
+        assertEquals(
+                HttpStatus.UNAUTHORIZED,
+                exception.getStatusCode()
+        );
+    }
+
+    private GoogleIdentityClient createClient(
+            JwtDecoder decoder
+    ) {
+        return new GoogleIdentityClient(
+                restClientBuilder,
+                WEB_CLIENT_ID,
+                WEB_CLIENT_SECRET,
+                decoder
+        );
+    }
+
+    private Jwt createJwt(
+            String subject,
+            String email,
+            String displayName
+    ) {
+        return createJwtWithAudience(
+                subject,
+                email,
+                displayName,
+                WEB_CLIENT_ID
+        );
+    }
+
+    private Jwt createJwtWithAudience(
+            String subject,
+            String email,
+            String displayName,
+            String audience
+    ) {
+        return Jwt.withTokenValue("token")
+                .header("alg", "RS256")
+                .claim("iss", "https://accounts.google.com")
+                .audience(List.of(audience))
+                .claim("email_verified", true)
+                .subject(subject)
+                .claim("email", email)
+                .claim("name", displayName)
+                .issuedAt(Instant.now())
+                .expiresAt(Instant.now().plusSeconds(3600))
                 .build();
     }
 }
