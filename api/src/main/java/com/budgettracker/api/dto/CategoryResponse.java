@@ -3,11 +3,12 @@ package com.budgettracker.api.dto;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
 /**
- * Response class for category entity
- * @param id Long category id
- * @param name String category name
- * @param isActive Boolean is/not active
- * @param createdByUserId Long id of user who created it
+ * Response body representing a category.
+ *
+ * @param id category ID
+ * @param name category name
+ * @param isActive whether the category is active
+ * @param createdByUserId ID of the user who created the category
  */
 public record CategoryResponse(
         Long id,
@@ -17,4 +18,5 @@ public record CategoryResponse(
         boolean isActive,
 
         Long createdByUserId
-) {}
+) {
+}
