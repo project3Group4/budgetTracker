@@ -140,7 +140,8 @@ public class CategoryService {
     }
 
     /**
-     * Deletes a category.
+     * Deactivates a category instead of permanently deleting it.
+     * This preserves financial and expense records that reference the category.
      *
      * @param adminUserId administrator's user ID
      * @param categoryId category ID
@@ -151,6 +152,10 @@ public class CategoryService {
         requireAdmin(adminUserId);
 
         Category category = findCategory(categoryId);
+
+        //soft delete: preserve category and mark it inactive
+        category.updateActive(false);
+
         categoryRepository.delete(category);
     }
 
