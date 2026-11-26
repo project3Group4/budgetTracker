@@ -385,9 +385,6 @@ class CategoryServiceTest {
 
         verify(categoryRepository, never())
                 .delete(any(Category.class));
-
-        verify(categoryRepository, never())
-                .delete(any(Category.class));
     }
 
     @Test

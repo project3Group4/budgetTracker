@@ -156,7 +156,7 @@ public class CategoryService {
         //soft delete: preserve category and mark it inactive
         category.updateActive(false);
 
-        categoryRepository.delete(category);
+        categoryRepository.save(category);
     }
 
     /**
