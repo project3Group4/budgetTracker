@@ -386,4 +386,36 @@ class CategoryServiceTest {
         verify(categoryRepository, never())
                 .delete(any(Category.class));
     }
+
+    @Test
+    void deleteCategoryRejectsNonAdmin() {
+        User user = new User(
+                "user@example.com",
+                "User",
+                Role.USER
+        );
+
+        when(userRepository.findById(1L))
+                .thenReturn(Optional.of(user));
+
+        ResponseStatusException exception =
+                assertThrows(
+                        ResponseStatusException.class,
+                        () -> categoryService.deleteCategory(1L, 7L)
+                );
+
+        assertEquals(
+                HttpStatus.FORBIDDEN,
+                exception.getStatusCode()
+        );
+
+        verify(categoryRepository, never())
+                .findById(anyLong());
+
+        verify(categoryRepository, never())
+                .save(any(Category.class));
+
+        verify(categoryRepository, never())
+                .delete(any(Category.class));
+    }
 }
