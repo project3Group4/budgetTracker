@@ -333,7 +333,7 @@ class CategoryServiceTest {
     }
 
     @Test
-    void deleteCategoryDeletesCategoryForAdmin() {
+    void deleteCategoryDeactivatesCategoryForAdmin() {
         User admin = new User(
                 "admin@example.com",
                 "Admin",
@@ -341,7 +341,7 @@ class CategoryServiceTest {
         );
 
         Category category =
-                new Category(null, "Dining");
+                new Category(null, "Dining", true);
 
         when(userRepository.findById(1L))
                 .thenReturn(Optional.of(admin));
@@ -351,7 +351,11 @@ class CategoryServiceTest {
 
         categoryService.deleteCategory(1L, 7L);
 
-        verify(categoryRepository).delete(category);
+        assertFalse(category.isActive());
+
+        verify(categoryRepository).save(category);
+        verify(categoryRepository, never())
+                .delete(any(Category.class));
     }
 
     @Test
