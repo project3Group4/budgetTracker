@@ -125,7 +125,7 @@ public class CategoryController {
     }
 
     /**
-     * Deletes a category.
+     * Deactivates a category while preserving existing financial records.
      *
      * @param jwt authenticated user's JWT
      * @param categoryId category ID
